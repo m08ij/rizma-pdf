@@ -60,8 +60,10 @@
     return lg;
   }
   /* the first net's 64 hidden features of a glyph (used to tell upright writing from upside-down) */
+  let fnet = null;
   function features(img) {
-    const N = getNet(); if (!N) return null; const n = N[0];
+    if (!fnet) { if (window.HAND_F) fnet = decode(window.HAND_F); else { const N = getNet(); if (!N) return null; fnet = N[0]; } }
+    const n = fnet;
     let h = reluPool(conv(img, 1, 28, n.c1, n.b1, 12), 12, 28);
     h = reluPool(conv(h, 12, 14, n.c2, n.b2, 24), 24, 14);
     const z = new Float32Array(64);
@@ -349,7 +351,7 @@
         if (set.length) sets.push(set);
       }
       const digits = sets[0] || [];
-      out.push({box: {...b}, bw, bh, inside, digits, sets, crossed, cover});
+      out.push({box: {...b}, bw, bh, inside, digits, sets, crossed, cover, members});
     };
     for (const c of comps) {
       if (c.bw < w * .02 || c.bh < w * .018 || c.bw > w * .26 || c.bh > w * .13 || c.n < w * .02) continue;
@@ -442,7 +444,7 @@
         g.push(nx); used.add(nx); b = nb;
       }
       const gw = b.x1 - b.x0 + 1, gh = b.y1 - b.y0 + 1;
-      if (gw > gh * 3.2 || (b.y0 + b.y1) / 2 > h * .55 || gh < w * .013) continue;
+      if (gw > gh * 3.2 || (b.y0 + b.y1) / 2 > h * .55 || gh < w * .013 || b.y0 < h * .02) continue;
       // alone: nothing else written close by on the same line
       const gs = new Set(g), near = others.some(o => !gs.has(o) && !taken.has(o) && Math.max(o.bw, o.bh) >= gh * .35 &&
         o.x0 < b.x1 + gh * 2.5 && o.x1 > b.x0 - gh * 2.5 && o.y0 < b.y1 + gh * .8 && o.y1 > b.y0 - gh * .8);
@@ -471,6 +473,10 @@
       const topQ = Math.max(...reads.map(x => x.q));
       const g = pickRead(reads, topQ);
       if (g.scribbled) r.crossed = true;
+      // an 8 (or 0) can look like a ring with a stroke inside; if the whole thing reads as one clear digit, it is one
+      const all = []; for (const o of r.members) for (const p of o.px) all.push(p);
+      const whole = r.bw <= r.bh * 1.25 ? readGlyph(all, map.w) : null;
+      if (whole && (whole.d === 8 || whole.d === 0) && whole.p > .9) { r.skip = true; continue; }
       const big = r.bh / map.w, high = 1 - r.box.y0 / map.h;
       const score = g.conf * (r.crossed ? .25 : 1) + (r.crossed ? 0 : .5) + Math.min(.3, big * 4) + high * .2;
       // other plausible readings, for the cross-page check
@@ -478,15 +484,15 @@
       for (const x of reads) if (x.q >= Math.min(topQ - .3, .5)) opts.add(x.v);
       if (String(g.v).length === 3) { const t = String(g.v); opts.add(+t.slice(1)); opts.add(+t.slice(0, 2)); }
       const agree = reads.filter(x => x.v === g.v).length / reads.length;
-      res.push({v: g.v, conf: g.conf, agree, score, kind: 'circle', crossed: r.crossed, opts: [...opts].filter(v => v > 0), box: toBox(r.box.x0, r.box.y0, r.box.x1, r.box.y1)});
+      res.push({v: g.v, conf: g.conf, agree, score, kind: 'circle', comps: r.members, crossed: r.crossed, opts: [...opts].filter(v => v > 0), box: toBox(r.box.x0, r.box.y0, r.box.x1, r.box.y1)});
     }
     // strokes that belong to a ring are not candidates for a lone number
     const taken = new Set();
-    for (const r of rl) for (const c of comps) if (c.x0 >= r.box.x0 && c.x1 <= r.box.x1 && c.y0 >= r.box.y0 && c.y1 <= r.box.y1) taken.add(c);
+    for (const r of rl) if (!r.skip) for (const c of comps) if (c.x0 >= r.box.x0 && c.x1 <= r.box.x1 && c.y0 >= r.box.y0 && c.y1 <= r.box.y1) taken.add(c);
     for (const ln of lones(map, comps, taken)) {
       const g = readBest(ln.g, map.w); if (!g || !g.v || g.glyphs.length > 3) continue;
       const b = ln.box;
-      res.push({v: g.v, conf: g.conf, agree: 1, score: g.q + .45 - (g.glyphs.length === 1 ? .1 : 0), kind: 'lone', opts: [g.v], box: toBox(b.x0, b.y0, b.x1, b.y1)});
+      res.push({v: g.v, conf: g.conf, agree: 1, score: g.q + .45 - (g.glyphs.length === 1 ? .1 : 0), kind: 'lone', comps: ln.g, opts: [g.v], box: toBox(b.x0, b.y0, b.x1, b.y1)});
     }
     for (const hd of headings(map, comps)) {
       // where the word ends and the number starts is not always clear ("lecture26"): keep the readings of the
@@ -499,8 +505,25 @@
       if (!opts.length) continue;
       const pick = opts.find(o => o.part.length === 2 && o.conf >= .5) || opts[0];
       const a = pick.part[0], b = pick.part[pick.part.length - 1];
-      res.push({v: pick.v, conf: pick.conf, score: pick.conf * .9 + Math.min(.15, hd.line.length * .015), kind: 'heading', opts: opts.map(o => o.v),
+      const ly0 = Math.min(...hd.line.map(c => c.y0)), ly1 = Math.max(...hd.line.map(c => c.y1));
+      res.push({v: pick.v, conf: pick.conf, score: pick.conf * .9 + Math.min(.15, hd.line.length * .015), kind: 'heading', opts: opts.map(o => o.v), n: hd.line.length, comps: new Set(hd.line),
+        line: [region.y + ly0 / map.h * region.h, region.y + (ly1 + 1) / map.h * region.h],
         box: toBox(a.x0, Math.min(...pick.part.map(t => t.y0)), b.x1, Math.max(...pick.part.map(t => t.y1)))});
+    }
+    // a title line such as "calc 1        Lecture 5": the number at the end of the long line is the one;
+    // a lone number or a small ring ("Calculus (1)") on the same line is part of the title
+    for (const hd of res) {
+      if (hd.kind !== 'heading' || hd.conf < .7 || hd.n < 5) continue;
+      for (const c of res) {
+        if (c.kind === 'heading') continue;
+        const cy = (c.box.y0 + c.box.y1) / 2, pad = (hd.line[1] - hd.line[0]) * .3;
+        const lh = hd.line[1] - hd.line[0];
+        if ((cy > hd.line[0] - pad && cy < hd.line[1] + pad) || (c.comps && c.comps.some(o => hd.comps.has(o)))) c.score -= .9;
+        // "calc 1   ...   Lecture 5" on a slanted page: a lone number left of the heading, about on its line
+        else if (c.kind === 'lone' && hd.conf >= .9 && c.box.x1 < hd.box.x0 && cy > hd.line[0] - lh && cy < hd.line[1] + lh) c.score -= .9;
+        // the title is the top line: numbers written below it belong to the notes
+        else if (hd.conf >= .9 && c.box.y0 > hd.line[1] + lh * .3) c.score -= .9;
+      }
     }
     return res.sort((a, b) => b.score - a.score);
   }

@@ -394,6 +394,8 @@
         if (!it.popts || it.popts.length < 2) continue;
         const own = (anchors.get(it.pnum) || 0) - (it.unsure ? 0 : 1);
         if (own > 0) continue;
+        // a lecture with a single page has no twin, but its neighbours (n-1, n+1) make the reading plausible
+        if (anchors.get(it.pnum - 1) || anchors.get(it.pnum + 1)) continue;
         const alt = it.popts.filter(v => v !== it.pnum && anchors.get(v)).sort((a, b) => anchors.get(b) - anchors.get(a))[0];
         if (alt != null) { it.palt = it.pnum; it.pnum = alt; it.unsure = true; }
       }
