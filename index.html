@@ -4,250 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>رزمة PDF</title>
-<meta name="description" content="حوّل صور دفاترك وتلاخيصك وسلايداتك إلى ملف PDF مرتب، مع ترتيب تلقائي حسب رقم الصفحة. كل شيء يعمل على جهازك.">
+<meta name="description" content="حوّل صور دفاترك وتلاخيصك وسلايداتك إلى ملف PDF مرتب: قص تلقائي للورقة، ترتيب حسب رقم الصفحة، وملف قابل للبحث. كل شيء يعمل على جهازك.">
+<meta name="theme-color" content="#F5F6F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1218" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="رزمة PDF">
+<meta property="og:description" content="صور دفاترك وتلاخيصك وسلايداتك في ملف PDF واحد مرتب، مع قص تلقائي وترتيب حسب رقم الصفحة.">
+<meta property="og:image" content="https://m08ij.github.io/rizma-pdf/assets/og.png">
+<meta property="og:url" content="https://m08ij.github.io/rizma-pdf/">
+<meta property="og:locale" content="ar_AR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap">
-<style>
-/* Layout: preset strip on top, then image tray (main) + preview column; advanced options live in a side drawer. Graph-paper ground. */
-:root{
-  --paper:#F3F5F8; --surface:#FFFFFF; --surface-2:#F7F8FA; --ink:#151C28; --muted:#5D6778;
-  --line:#E0E4EB; --grid:rgba(53,99,214,.06); --accent:#3563D6; --on-accent:#FFFFFF;
-  --hl:#FFD84D; --danger:#C93C3C; --ok:#1E8E5A;
-  --shadow:0 1px 2px rgba(21,28,40,.06),0 8px 24px -12px rgba(21,28,40,.18);
-  --f-display:"Readex Pro","IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
-  --f-body:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
-  --r:14px; color-scheme:light;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#0E131B; --surface:#161D29; --surface-2:#1B2331; --ink:#E6EBF2; --muted:#97A3B6;
-  --line:#273245; --grid:rgba(120,155,240,.07); --hl:#E8C33A; --danger:#EE6B6B; --ok:#3FBF84;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#0E131B; --surface:#161D29; --surface-2:#1B2331; --ink:#E6EBF2; --muted:#97A3B6;
-  --line:#273245; --grid:rgba(120,155,240,.07); --hl:#E8C33A; --danger:#EE6B6B; --ok:#3FBF84;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6); color-scheme:dark}
-
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-html,body{min-height:100%;margin:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6;
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px}
-.app{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:max(14px,env(safe-area-inset-top,0px)) 48px;max-width:1440px;margin:0 auto;display:grid;gap:16px}
-button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
-svg{flex:none}
-
-/* header */
-.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
-.mark{width:40px;height:40px;position:relative;flex:none}
-.mark i{position:absolute;inset:0;border-radius:8px;background:var(--surface);border:1.5px solid var(--ink)}
-.mark i:nth-child(1){transform:rotate(-9deg) translate(3px,2px);opacity:.45}
-.mark i:nth-child(2){transform:rotate(-3deg) translate(1px,1px);opacity:.7}
-.mark i:nth-child(3){background:var(--accent);border-color:var(--accent)}
-.mark b{position:absolute;inset:0;display:grid;place-items:center;color:var(--on-accent);font:700 11px var(--f-display);letter-spacing:.04em}
-.brand h1{font:700 22px/1.1 var(--f-display);margin:0}
-.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);
-  padding:9px 14px;border-radius:10px;cursor:pointer;transition:transform .15s,background .15s,border-color .15s,box-shadow .15s,opacity .2s;white-space:nowrap}
-.btn:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.45;cursor:default;transform:none}
-.btn svg{width:17px;height:17px}
-.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600;box-shadow:0 6px 18px -8px var(--accent)}
-.btn.primary:hover{filter:brightness(1.07)}
-.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
-.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
-.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
-.btn.magic{border-color:color-mix(in srgb,var(--accent) 40%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:var(--accent);font-weight:600}
-.btn.magic:hover{background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
-.btn.danger:hover{color:var(--danger);border-color:var(--danger)}
-
-/* preset strip */
-.kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:760px){.kinds{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kind{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;text-align:start;cursor:pointer;display:flex;gap:12px;align-items:center;
-  transition:border-color .2s,transform .15s,box-shadow .2s;min-width:0}
-.kind:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.kind.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
-.kind .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--accent);flex:none;transition:background .2s,color .2s}
-.kind.on .ic{background:var(--accent);color:var(--on-accent)}
-.kind .ic svg{width:20px;height:20px}
-.kind b{display:block;font:600 14px var(--f-display)}
-.kind span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
-.kind>div{min-width:0}
-
-/* layout */
-.bench{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
-@media (max-width:980px){.bench{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
-
-/* workspace */
-.work{display:grid;gap:12px;min-width:0}
-.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px}
-.toolbar .count{font:600 15px var(--f-display);margin-inline-end:4px}
-.toolbar .count small{font:400 12px var(--f-body);color:var(--muted);margin-inline-start:6px}
-.toolbar .sp{flex:1}
-.menu{position:relative}
-.menu .pop{position:absolute;top:calc(100% + 6px);inset-inline-start:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:5px;min-width:200px;z-index:20;display:grid;animation:drop .2s ease}
-.menu .pop button{border:0;background:transparent;text-align:start;padding:8px 10px;border-radius:7px;cursor:pointer}
-.menu .pop button:hover{background:var(--surface-2)}
-@keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-radius:10px;
-  background:color-mix(in srgb,var(--hl) 20%,var(--surface));border:1px dashed color-mix(in srgb,var(--hl) 70%,var(--line));font-size:13px}
-.banner p{margin:0;flex:1;min-width:200px}
-.tray{padding:14px;min-height:300px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
-.card{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:6px;cursor:grab;position:relative;
-  transition:border-color .2s,box-shadow .2s;animation:pop .45s cubic-bezier(.2,1.3,.4,1) both;min-width:0}
-.card:hover{box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
-.card.sel{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
-.card.moved{animation:moved .7s ease}
-@keyframes pop{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:none}}
-@keyframes moved{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
-.thumb{aspect-ratio:3/4;max-width:100%;border-radius:8px;background:repeating-conic-gradient(color-mix(in srgb,var(--line) 60%,transparent) 0 25%,transparent 0 50%) 0 0/14px 14px;display:grid;place-items:center;overflow:hidden;position:relative}
-.thumb canvas{max-width:100%;max-height:100%;display:block;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.scanline{position:absolute;inset-inline:0;top:0;height:16%;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--accent) 35%,transparent),transparent);animation:scan 1s ease-in-out infinite alternate}
-@keyframes scan{to{top:84%}}
-.badge{position:absolute;top:13px;inset-inline-start:13px;min-width:26px;height:26px;padding:0 7px;border-radius:99px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:600 12px var(--f-display);font-variant-numeric:tabular-nums;box-shadow:0 2px 6px rgba(0,0,0,.25)}
-.tag{position:absolute;bottom:6px;inset-inline-end:6px;background:var(--hl);color:#3a2c00;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px}
-.meta{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);min-width:0;min-height:24px}
-.meta .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;direction:ltr;text-align:right;flex:1}
-.pnum{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:1px 8px;font-size:11.5px;cursor:text;font-variant-numeric:tabular-nums;color:var(--ink);transition:border-color .2s,background .2s}
-.pnum:hover{border-color:var(--accent)}
-.pnum.found{background:color-mix(in srgb,var(--ok) 12%,var(--surface));border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
-.pnum.miss{background:color-mix(in srgb,var(--hl) 30%,var(--surface));border-color:color-mix(in srgb,var(--hl) 80%,var(--line))}
-.pnum-in{width:64px;border:1px solid var(--accent);border-radius:99px;padding:1px 8px;font-size:12px;background:var(--surface);text-align:center}
-.acts{display:flex;gap:2px;justify-content:space-between;opacity:0;transition:opacity .2s}
-.card:hover .acts,.card:focus-within .acts,.card.sel .acts{opacity:1}
-@media (hover:none){.acts{opacity:1}}
-.acts button{flex:1;border:1px solid transparent;background:transparent;border-radius:7px;padding:5px 0;cursor:pointer;color:var(--muted);display:grid;place-items:center;transition:background .15s,color .15s}
-.acts button:hover{background:var(--surface);color:var(--ink);border-color:var(--line)}
-.acts button.del:hover{color:var(--danger)}
-.acts svg{width:16px;height:16px}
-.ghost-card{opacity:.35}
-.chosen-card{box-shadow:0 16px 36px -12px rgba(0,0,0,.4)!important}
-.empty{display:grid;place-items:center;text-align:center;gap:10px;padding:56px 16px;color:var(--muted);border:2px dashed var(--line);border-radius:12px;cursor:pointer;transition:border-color .2s,background .2s}
-.empty:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 4%,transparent)}
-.empty h3{margin:0;color:var(--ink);font:600 18px var(--f-display)}
-.empty svg{width:46px;height:46px;color:var(--accent)}
-.empty p{margin:0;max-width:44ch}
-.drop{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,var(--accent) 16%,transparent);backdrop-filter:blur(3px);display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .2s}
-.drop.show{opacity:1}
-.drop div{background:var(--surface);border:2px dashed var(--accent);border-radius:16px;padding:28px 40px;font:600 18px var(--f-display);color:var(--accent)}
-.hint{font-size:12px;color:var(--muted);margin:0}
-.fab{display:none}
-@media (max-width:980px){
-  .fab{display:flex;position:fixed;z-index:40;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));padding:13px;font-size:15px;border-radius:12px}
-  .app{padding-bottom:96px}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
-}
-@media (max-width:560px){.kind span{display:none}.kind{padding:10px}.kind .ic{width:32px;height:32px}}
-
-/* side column */
-.side{display:grid;gap:12px;position:sticky;top:max(12px,env(safe-area-inset-top,0px));max-height:calc(100vh - 24px);overflow:auto;scrollbar-width:thin;border-radius:var(--r)}
-@media (max-width:980px){.side{position:static;max-height:none;overflow:visible}}
-.preview{padding:14px;display:grid;gap:10px}
-.pv-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.pv-head h2{margin:0;font:600 15px var(--f-display)}
-.pv-stage{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;place-items:center;min-height:260px;overflow:hidden;
-  background-image:radial-gradient(color-mix(in srgb,var(--muted) 25%,transparent) 1px,transparent 1px);background-size:12px 12px}
-.pv-stage canvas{max-width:100%;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 30px -10px rgba(0,0,0,.35);border-radius:2px}
-.pv-stage canvas.flip-n{animation:flipn .35s ease}
-.pv-stage canvas.flip-p{animation:flipp .35s ease}
-@keyframes flipn{from{opacity:.2;transform:translateX(-26px) rotate(-2deg)}to{opacity:1;transform:none}}
-@keyframes flipp{from{opacity:.2;transform:translateX(26px) rotate(2deg)}to{opacity:1;transform:none}}
-.pv-nav{display:flex;align-items:center;justify-content:center;gap:10px;font-variant-numeric:tabular-nums}
-.pv-nav span{min-width:80px;text-align:center;font-weight:600}
-.chip{font-size:11.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.quick{padding:14px;display:grid;gap:14px}
-.field{display:grid;gap:6px;min-width:0}
-.field>label,.lbl{font-size:12px;color:var(--muted);font-weight:500;display:flex;justify-content:space-between;gap:8px}
-.lbl output{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-select,input[type=text],input[type=number]{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:8px 10px;min-width:0}
-input[type=text]::placeholder{color:color-mix(in srgb,var(--muted) 70%,transparent)}
-input[type=range]{width:100%;accent-color:var(--accent);margin:0}
-input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface-2);cursor:pointer}
-.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
-.seg button{flex:1;border:0;background:transparent;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--muted);transition:background .2s,color .2s;white-space:nowrap}
-.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
-.gridpick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.gridpick button{border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:7px 2px 4px;cursor:pointer;display:grid;gap:3px;justify-items:center;font-size:10.5px;color:var(--muted);transition:border-color .2s,color .2s}
-.gridpick button.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
-.mini{width:20px;height:26px;border:1.5px solid currentColor;border-radius:3px;padding:2px;display:grid;gap:1.5px}
-.mini span{background:currentColor;opacity:.35;border-radius:1px}
-.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-size:13px}
-.toggle input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:background .2s;flex:none;margin:0}
-.toggle input::after{content:"";position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.3,1.4,.5,1);box-shadow:0 1px 2px rgba(0,0,0,.25)}
-.toggle input:checked{background:var(--accent)}
-.toggle input:checked::after{transform:translateX(-16px)}
-.colors{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;transition:transform .15s;padding:0}
-.sw:hover{transform:scale(1.12)}
-.sw.on{box-shadow:0 0 0 2px var(--ink)}
-.export{display:grid;gap:8px}
-.export .btn.primary{padding:12px 16px;font-size:15px}
-
-/* drawer */
-.scrim{position:fixed;inset:0;z-index:55;background:rgba(10,14,22,.45);animation:fade .2s}
-.drawer{position:fixed;top:0;bottom:0;left:0;z-index:56;width:min(400px,100%);background:var(--surface);border-right:1px solid var(--line);box-shadow:0 0 60px rgba(0,0,0,.3);
-  display:flex;flex-direction:column;animation:slide .3s cubic-bezier(.2,1,.3,1);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px)}
-@keyframes slide{from{transform:translateX(-100%)}}
-@keyframes fade{from{opacity:0}}
-.dr-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
-.dr-head h2{margin:0;font:600 16px var(--f-display)}
-.tabs{display:flex;gap:4px;padding:10px 12px 0;border-bottom:1px solid var(--line);overflow-x:auto}
-.tabs button{border:0;background:transparent;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
-.tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
-.dr-body{overflow:auto;padding:16px;display:grid;gap:16px;align-content:start;flex:1}
-.dr-body .pane{display:grid;gap:16px;animation:drop .25s ease}
-
-/* modal editor */
-.modal{position:fixed;inset:0;z-index:60;background:rgba(10,14,22,.55);backdrop-filter:blur(4px);display:grid;place-items:center;
-  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fade .2s ease}
-.sheet{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5);width:min(980px,100%);max-height:100%;overflow:auto;
-  display:grid;grid-template-columns:minmax(0,1fr) 290px;animation:rise .35s cubic-bezier(.2,1.2,.4,1)}
-@keyframes rise{from{opacity:0;transform:translateY(20px) scale(.97)}}
-@media (max-width:760px){.sheet{grid-template-columns:minmax(0,1fr)}}
-.ed-stage{background:var(--surface-2);display:grid;place-items:center;padding:18px;min-height:320px;
-  background-image:repeating-conic-gradient(color-mix(in srgb,var(--line) 60%,transparent) 0 25%,transparent 0 50%);background-size:16px 16px}
-.ed-stage canvas{max-width:100%;max-height:62vh;box-shadow:0 8px 30px -8px rgba(0,0,0,.4)}
-.ed-side{padding:16px;display:grid;gap:14px;align-content:start}
-.ed-side h3{margin:0;font:600 16px var(--f-display)}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chips button{border:1px solid var(--line);background:var(--surface-2);border-radius:99px;padding:5px 11px;cursor:pointer;font-size:12.5px;transition:all .2s}
-.chips button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.ed-foot{display:flex;gap:8px;flex-wrap:wrap}
-.ed-foot .btn{flex:1}
-
-/* busy + toast */
-.busy{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(6px);display:grid;place-items:center;animation:fade .2s}
-.busy-card{display:grid;gap:14px;justify-items:center;text-align:center;padding:24px}
-.stack{position:relative;width:80px;height:100px}
-.stack i{position:absolute;inset:0;background:var(--surface);border:1.5px solid var(--ink);border-radius:6px;animation:deal 1.2s ease-in-out infinite}
-.stack i:nth-child(2){animation-delay:.2s}.stack i:nth-child(3){animation-delay:.4s;background:var(--accent);border-color:var(--accent)}
-@keyframes deal{0%{transform:translateY(-30px) rotate(-12deg);opacity:0}30%{opacity:1}60%,100%{transform:none;opacity:1}}
-.bar{width:min(280px,70vw);height:8px;border-radius:99px;background:var(--line);overflow:hidden}
-.bar b{display:block;height:100%;width:0;background:var(--accent);border-radius:inherit;transition:width .2s}
-.busy-card strong{font:600 16px var(--f-display)}
-.busy-card span{color:var(--muted);font-variant-numeric:tabular-nums}
-.toasts{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:80;display:grid;gap:8px;justify-items:center;pointer-events:none;width:max-content;max-width:calc(100% - 32px)}
-.toast{background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.3,.4,1);text-align:center}
-.toast.out{animation:tout .3s ease forwards}
-@keyframes tin{from{opacity:0;transform:translateY(14px) scale(.95)}}
-@keyframes tout{to{opacity:0;transform:translateY(8px)}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-</style>
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem('rizma-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
 <div class="app">
   <header class="top">
     <div class="brand">
-      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><b>PDF</b></div>
+      <img src="assets/favicon.svg" alt="" width="40" height="40">
       <div><h1>رزمة</h1><p>صور دفاترك وتلاخيصك وسلايداتك في ملف PDF واحد مرتب</p></div>
     </div>
+    <div class="steps" aria-label="الخطوات"><span><b>١</b>أضف الصور</span><i></i><span><b>٢</b>رتّبها</span><i></i><span><b>٣</b>نزّل الملف</span></div>
+    <button class="btn icon" id="themeBtn" aria-label="تبديل الوضع الفاتح والداكن" title="الوضع الفاتح / الداكن"></button>
     <button class="btn" id="addTop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>إضافة صور</button>
   </header>
 
@@ -255,33 +38,49 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
 
   <div class="bench">
     <main class="work">
+      <div class="selbar" id="selbar" hidden>
+        <b id="selCount"></b>
+        <button class="btn sm" data-sel="rot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>تدوير</button>
+        <button class="btn sm" data-sel="doc">مسح ضوئي</button>
+        <button class="btn sm" data-sel="orig">الألوان الأصلية</button>
+        <button class="btn sm" data-sel="first">نقل للبداية</button>
+        <button class="btn sm" data-sel="last">نقل للنهاية</button>
+        <button class="btn sm" data-sel="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>حذف</button>
+        <span class="sp"></span>
+        <button class="btn sm" data-sel="all">تحديد الكل</button>
+        <button class="btn sm icon" data-sel="none" aria-label="إلغاء التحديد"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
       <div class="panel toolbar">
         <span class="count" id="count">٠ صورة</span>
-        <button class="btn sm magic" id="autoSort" title="يقرأ رقم الصفحة المكتوب على كل صورة ويرتبها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>رتّب حسب رقم الصفحة</button>
+        <button class="btn sm soft" id="autoSort" title="يقرأ رقم الصفحة المكتوب على كل صورة ويرتبها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>رتّب حسب رقم الصفحة</button>
         <div class="menu">
-          <button class="btn sm" id="sortBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg>ترتيب آخر</button>
+          <button class="btn sm ghost" id="sortBtn" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg>ترتيب آخر</button>
           <div class="pop" id="sortPop" hidden>
             <button data-sort="name">حسب اسم الملف</button>
             <button data-sort="date">حسب وقت التصوير</button>
             <button data-sort="reverse">عكس الترتيب الحالي</button>
+            <button data-sort="rescan">إعادة قراءة الأرقام من جديد</button>
           </div>
         </div>
-        <div class="sp"></div>
+        <span class="sp"></span>
+        <button class="btn sm icon ghost" id="undoBtn" aria-label="تراجع" title="تراجع (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8H6m0 0 3-3M6 8l3 3"/><path d="M6 8h8a5 5 0 0 1 0 10H9"/></svg></button>
+        <button class="btn sm icon ghost" id="redoBtn" aria-label="إعادة" title="إعادة (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h8m0 0-3-3m3 3-3 3"/><path d="M18 8h-8a5 5 0 0 0 0 10h5"/></svg></button>
+        <span class="sep"></span>
         <button class="btn sm ghost danger" id="clearAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span>مسح الكل</span></button>
       </div>
       <div class="banner" id="sampleBanner" hidden>
-        <p><b>صور تجريبية، ترتيبها خاطئ عمداً.</b> جرّب زر «رتّب حسب رقم الصفحة» لترى كيف يقرأ الأرقام المكتوبة أعلى الصفحات. تختفي عند إضافة صورك.</p>
+        <p><b>صور تجريبية بترتيب خاطئ عمداً.</b> جرّب «رتّب حسب رقم الصفحة». ستختفي عند إضافة صورك.</p>
         <button class="btn sm" id="dropSamples">إزالتها</button>
       </div>
       <section class="panel tray">
         <div class="grid" id="grid"></div>
         <div class="empty" id="empty" hidden role="button" tabindex="0">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
-          <h3>اسحب الصور إلى هنا</h3>
+          <h3>اسحب صورك إلى هنا</h3>
           <p>أو اضغط للاختيار، أو الصق صورة بـ Ctrl+V. يدعم JPG و PNG و WEBP.</p>
         </div>
       </section>
-      <p class="hint">اسحب البطاقات لتغيير الترتيب. اضغط مرتين على صورة لقصها أو تدويرها أو تحسينها. اضغط على رقم الصفحة تحت الصورة لتصحيحه يدوياً.</p>
+      <p class="hint">اسحب البطاقات لتغيير الترتيب. حدّد عدة صور بالدائرة أعلى البطاقة أو بـ <kbd>Ctrl</kbd> و <kbd>Shift</kbd>. اضغط مرتين على صورة لتعديل زوايا الورقة والقص والفلاتر. تراجع بـ <kbd>Ctrl+Z</kbd>.</p>
     </main>
 
     <aside class="side">
@@ -289,9 +88,9 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
         <div class="pv-head"><h2>المعاينة</h2><span class="chip" id="pvSize"></span></div>
         <div class="pv-stage"><canvas id="pv"></canvas></div>
         <div class="pv-nav">
-          <button class="btn sm" id="pvNext" aria-label="الصفحة التالية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+          <button class="btn sm icon" id="pvNext" aria-label="الصفحة التالية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
           <span id="pvLabel">١ / ١</span>
-          <button class="btn sm" id="pvPrev" aria-label="الصفحة السابقة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg></button>
+          <button class="btn sm icon" id="pvPrev" aria-label="الصفحة السابقة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg></button>
         </div>
       </section>
       <section class="panel quick" aria-label="الإعدادات الأساسية">
@@ -302,12 +101,14 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
               <option value="Letter">Letter</option><option value="Slide">شريحة 16:9</option><option value="fit">مقاس الصورة</option>
             </select></div>
           <div class="field"><span class="lbl">الهوامش <output data-out="margin"></output></span>
-            <input type="range" id="s-margin" data-k="margin" min="0" max="30" step="1" style="margin-top:8px"></div>
+            <input type="range" id="s-margin" data-k="margin" min="0" max="30" step="1" style="margin-top:8px" aria-label="الهوامش"></div>
         </div>
         <div class="field"><span class="lbl">صور في كل صفحة</span><div class="gridpick" id="gridpick"></div></div>
-        <label class="toggle">تحسين الصور كأنها ممسوحة ضوئياً<input type="checkbox" id="scanAll"></label>
-        <label class="toggle">ترقيم صفحات الملف<input type="checkbox" id="numOn"></label>
-        <button class="btn sm" id="openAdv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>إعدادات متقدمة: غلاف، ترويسة، ألوان، جودة</button>
+        <label class="toggle"><span>قص الورقة تلقائياً<small>يزيل الطاولة ويعدّل الميلان</small></span><input type="checkbox" id="cropAll"></label>
+        <label class="toggle"><span>تحسين كأنها ممسوحة ضوئياً</span><input type="checkbox" id="scanAll"></label>
+        <label class="toggle"><span>ترقيم صفحات الملف</span><input type="checkbox" id="numOn"></label>
+        <label class="toggle"><span>ملف قابل للبحث<small>يقرأ النص لتبحث فيه داخل الـ PDF (أبطأ)</small></span><input type="checkbox" id="s-searchable" data-k="searchable"></label>
+        <button class="btn sm" id="openAdv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>إعدادات متقدمة</button>
         <div class="export">
           <div class="field"><label for="s-filename">اسم الملف</label><input type="text" id="s-filename" data-k="filename"></div>
           <button class="btn primary" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span id="exportLbl">تنزيل PDF</span></button>
@@ -318,40 +119,38 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
   </div>
 </div>
 
-<!-- advanced drawer -->
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" hidden aria-label="إعدادات متقدمة">
-  <div class="dr-head"><h2>إعدادات متقدمة</h2><button class="btn sm ghost" id="closeAdv" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="dr-head"><h2>إعدادات متقدمة</h2><button class="btn sm icon ghost" id="closeAdv" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div class="tabs" id="tabs"><button data-t="layout" class="on">التخطيط</button><button data-t="look">المظهر</button><button data-t="text">النصوص</button><button data-t="cover">الغلاف</button><button data-t="quality">الجودة</button></div>
   <div class="dr-body">
     <div class="pane" data-p="layout">
       <div class="field"><span class="lbl">الاتجاه</span><div class="seg" data-k="orient"><button data-v="auto">تلقائي</button><button data-v="portrait">طولي</button><button data-v="landscape">عرضي</button></div></div>
       <div class="field"><span class="lbl">ملاءمة الصورة</span><div class="seg" data-k="fit"><button data-v="contain">كاملة</button><button data-v="cover">ملء مع قص</button><button data-v="stretch">تمديد</button></div></div>
       <div class="field"><span class="lbl">المحاذاة العمودية</span><div class="seg" data-k="valign"><button data-v="top">أعلى</button><button data-v="center">وسط</button><button data-v="bottom">أسفل</button></div></div>
-      <div class="field"><span class="lbl">المسافة بين الصور <output data-out="gap"></output></span><input type="range" id="s-gap" data-k="gap" min="0" max="20" step="1"></div>
+      <div class="field"><span class="lbl">المسافة بين الصور <output data-out="gap"></output></span><input type="range" id="s-gap" data-k="gap" min="0" max="20" step="1" aria-label="المسافة بين الصور"></div>
       <div class="field"><span class="lbl">ترتيب الصور داخل الصفحة</span><div class="seg" data-k="dir"><button data-v="rtl">يبدأ من اليمين</button><button data-v="ltr">يبدأ من اليسار</button></div></div>
-      <div class="field"><span class="lbl">أين يُكتب رقم الصفحة في صورك؟ (للترتيب التلقائي)</span><div class="seg" data-k="numPos"><button data-v="top">أعلى</button><button data-v="both">أعلى وأسفل</button><button data-v="bottom">أسفل</button></div></div>
+      <div class="field"><span class="lbl">أين يُكتب رقم الصفحة في صورك؟</span><div class="seg" data-k="numPos"><button data-v="top">أعلى</button><button data-v="both">أعلى وأسفل</button><button data-v="bottom">أسفل</button></div></div>
     </div>
     <div class="pane" data-p="look" hidden>
       <div class="field"><span class="lbl">خلفية الصفحة</span><div class="colors" id="bgcolors"></div></div>
       <div class="field"><span class="lbl">نقشة الورق</span><div class="seg" data-k="pattern"><button data-v="none">بدون</button><button data-v="lines">مسطّر</button><button data-v="grid">مربعات</button><button data-v="dots">نقاط</button></div></div>
-      <div class="field"><span class="lbl">إطار الصورة <output data-out="border"></output></span><input type="range" id="s-border" data-k="border" min="0" max="2" step="0.1"></div>
+      <div class="field"><span class="lbl">إطار الصورة <output data-out="border"></output></span><input type="range" id="s-border" data-k="border" min="0" max="2" step="0.1" aria-label="إطار الصورة"></div>
       <div class="row2">
-        <div class="field"><span class="lbl">انحناء الزوايا <output data-out="radius"></output></span><input type="range" id="s-radius" data-k="radius" min="0" max="10" step="0.5"></div>
+        <div class="field"><span class="lbl">انحناء الزوايا <output data-out="radius"></output></span><input type="range" id="s-radius" data-k="radius" min="0" max="10" step="0.5" aria-label="انحناء الزوايا"></div>
         <div class="field"><label for="s-borderColor">لون الإطار</label><input type="color" id="s-borderColor" data-k="borderColor"></div>
       </div>
       <label class="toggle">ظل خفيف تحت الصور<input type="checkbox" id="s-shadow" data-k="shadow"></label>
-      <div class="field"><span class="lbl">لون الموقع والغلاف</span><div class="colors" id="accents"></div></div>
     </div>
     <div class="pane" data-p="text" hidden>
-      <div class="field"><label for="s-header">ترويسة أعلى كل صفحة</label><input type="text" id="s-header" data-k="header" placeholder="مثلاً: تفاضل وتكامل ٢ — د. أحمد"></div>
+      <div class="field"><label for="s-header">ترويسة أعلى كل صفحة</label><input type="text" id="s-header" data-k="header" placeholder="تفاضل وتكامل ٢ — د. أحمد"></div>
       <div class="field"><span class="lbl">مكان رقم الصفحة</span><div class="seg" data-k="pageNum"><button data-v="none">بدون</button><button data-v="right">يمين</button><button data-v="center">وسط</button><button data-v="left">يسار</button></div></div>
       <div class="row2">
         <div class="field"><label for="s-numFmt">الصيغة</label><select id="s-numFmt" data-k="numFmt"><option value="n">٣</option><option value="dash">— ٣ —</option><option value="of">٣ / ١٠</option><option value="page">صفحة ٣ من ١٠</option></select></div>
         <div class="field"><label for="s-digits">الأرقام</label><select id="s-digits" data-k="digits"><option value="ar">٠١٢٣</option><option value="en">0123</option></select></div>
       </div>
-      <div class="field"><label for="s-watermark">علامة مائية</label><input type="text" id="s-watermark" data-k="watermark" placeholder="مثلاً: ملخصات أحمد"></div>
-      <div class="field"><span class="lbl">شفافية العلامة <output data-out="wmOpacity"></output></span><input type="range" id="s-wmOpacity" data-k="wmOpacity" min="0.03" max="0.3" step="0.01"></div>
+      <div class="field"><label for="s-watermark">علامة مائية</label><input type="text" id="s-watermark" data-k="watermark" placeholder="ملخصات أحمد"></div>
+      <div class="field"><span class="lbl">شفافية العلامة <output data-out="wmOpacity"></output></span><input type="range" id="s-wmOpacity" data-k="wmOpacity" min="0.03" max="0.3" step="0.01" aria-label="شفافية العلامة"></div>
     </div>
     <div class="pane" data-p="cover" hidden>
       <label class="toggle">إضافة صفحة غلاف في البداية<input type="checkbox" id="s-cover" data-k="cover"></label>
@@ -361,12 +160,13 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
         <div class="field"><label for="s-coverName">الاسم</label><input type="text" id="s-coverName" data-k="coverName" placeholder="اسم الطالب"></div>
         <div class="field"><label for="s-coverDate">التاريخ</label><input type="text" id="s-coverDate" data-k="coverDate"></div>
       </div>
+      <div class="field"><span class="lbl">لون الغلاف</span><div class="colors" id="coverColors"></div></div>
       <label class="toggle">عدم ترقيم الغلاف<input type="checkbox" id="s-skipCoverNum" data-k="skipCoverNum"></label>
     </div>
     <div class="pane" data-p="quality" hidden>
       <div class="field"><span class="lbl">الدقة</span><div class="seg" data-k="dpi"><button data-v="100">خفيف</button><button data-v="150">عادي</button><button data-v="200">عالي</button><button data-v="300">للطباعة</button></div></div>
-      <div class="field"><span class="lbl">جودة الصور <output data-out="quality"></output></span><input type="range" id="s-quality" data-k="quality" min="0.4" max="1" step="0.05"></div>
-      <p class="hint">«خفيف» مناسب للإرسال على واتساب، «للطباعة» يعطي أوضح نتيجة وحجماً أكبر.</p>
+      <div class="field"><span class="lbl">جودة الصور <output data-out="quality"></output></span><input type="range" id="s-quality" data-k="quality" min="0.4" max="1" step="0.05" aria-label="جودة الصور"></div>
+      <p class="hint">«خفيف» مناسب للإرسال على واتساب، و«للطباعة» أوضح لكن حجمه أكبر.</p>
       <button class="btn sm" id="resetSettings">استعادة الإعدادات الافتراضية</button>
     </div>
   </div>
@@ -379,23 +179,31 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
 
 <div class="modal" id="editor" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edTitle">
-    <div class="ed-stage"><canvas id="edCanvas"></canvas></div>
+    <div class="ed-stage">
+      <div class="seg" id="edMode" style="width:min(320px,100%)"><button data-m="result" class="on">النتيجة</button><button data-m="corners">زوايا الورقة</button></div>
+      <div class="ed-wrap" id="edWrap"><canvas id="edCanvas"></canvas><svg id="edSvg" viewBox="0 0 1 1" preserveAspectRatio="none" hidden><polygon id="edPoly"></polygon></svg></div>
+      <p class="hint" id="edHint" hidden>اسحب النقاط الأربع إلى زوايا الورقة.</p>
+    </div>
     <div class="ed-side">
       <h3 id="edTitle">تعديل الصورة</h3>
+      <div class="ed-foot">
+        <button class="btn sm" id="edDetect">اكتشاف الورقة</button>
+        <button class="btn sm" id="edNoCrop">بدون قص للورقة</button>
+      </div>
       <div class="ed-foot">
         <button class="btn sm" id="edRotR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>تدوير يمين</button>
         <button class="btn sm" id="edRotL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5"/></svg>تدوير يسار</button>
       </div>
       <div class="field"><span class="lbl">فلتر</span>
         <div class="chips" id="edFilters"><button data-f="none">الأصل</button><button data-f="enhance">ألوان أوضح</button><button data-f="doc">مسح ضوئي</button><button data-f="gray">رمادي</button><button data-f="bw">أبيض وأسود</button></div></div>
-      <div class="field"><span class="lbl">السطوع <output id="oBright">0</output></span><input type="range" id="edBright" min="-100" max="100" step="1"></div>
-      <div class="field"><span class="lbl">التباين <output id="oContrast">0</output></span><input type="range" id="edContrast" min="-100" max="100" step="1"></div>
-      <div class="field"><span class="lbl">قص الحواف</span>
+      <div class="field"><span class="lbl">السطوع <output id="oBright">0</output></span><input type="range" id="edBright" min="-100" max="100" step="1" aria-label="السطوع"></div>
+      <div class="field"><span class="lbl">التباين <output id="oContrast">0</output></span><input type="range" id="edContrast" min="-100" max="100" step="1" aria-label="التباين"></div>
+      <div class="field"><span class="lbl">قص إضافي للحواف</span>
         <div class="row2">
-          <div class="field"><span class="lbl">أعلى <output id="oT">0</output></span><input type="range" id="edT" min="0" max="45" step="1"></div>
-          <div class="field"><span class="lbl">أسفل <output id="oB">0</output></span><input type="range" id="edB" min="0" max="45" step="1"></div>
-          <div class="field"><span class="lbl">يمين <output id="oR">0</output></span><input type="range" id="edR" min="0" max="45" step="1"></div>
-          <div class="field"><span class="lbl">يسار <output id="oL">0</output></span><input type="range" id="edL" min="0" max="45" step="1"></div>
+          <div class="field"><span class="lbl">أعلى <output id="oT">0</output></span><input type="range" id="edT" min="0" max="45" step="1" aria-label="قص أعلى"></div>
+          <div class="field"><span class="lbl">أسفل <output id="oB">0</output></span><input type="range" id="edB" min="0" max="45" step="1" aria-label="قص أسفل"></div>
+          <div class="field"><span class="lbl">يمين <output id="oR">0</output></span><input type="range" id="edR" min="0" max="45" step="1" aria-label="قص يمين"></div>
+          <div class="field"><span class="lbl">يسار <output id="oL">0</output></span><input type="range" id="edL" min="0" max="45" step="1" aria-label="قص يسار"></div>
         </div></div>
       <div class="ed-foot"><button class="btn sm ghost" id="edReset">إعادة ضبط</button></div>
       <div class="ed-foot"><button class="btn" id="edCancel">إلغاء</button><button class="btn primary" id="edSave">حفظ</button></div>
@@ -414,607 +222,8 @@ input[type=color]{width:34px;height:30px;border:1px solid var(--line);border-rad
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-<script>
-(() => {
-const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const FONT = '"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif';
-const DFONT = '"Readex Pro","IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif';
-const SIZES = {A4:[210,297],A5:[148,210],B5:[176,250],Letter:[215.9,279.4],Legal:[215.9,355.6],Slide:[338.67,190.5]};
-const GRIDS = ['1x1','1x2','2x1','1x3','2x2','2x3'];
-const BGS = ['#ffffff','#fbf8f0','#f2f5fa','#1c2230'];
-const ACCENTS = ['#3563D6','#0E8A7B','#C2452F','#B7791F','#6B5BD2'];
-const today = new Date().toLocaleDateString('ar', {year:'numeric', month:'long'});
-const DEF = {kind:'notes',size:'A4',orient:'auto',margin:8,grid:'1x1',fit:'contain',valign:'center',gap:6,dir:'rtl',bg:'#ffffff',pattern:'none',
-  border:0,radius:0,borderColor:'#c9d0db',shadow:false,accent:'#3563D6',header:'',pageNum:'center',numFmt:'n',digits:'ar',numPos:'both',
-  watermark:'',wmOpacity:0.08,cover:false,coverTitle:'',coverSub:'',coverName:'',coverDate:today,skipCoverNum:true,dpi:'150',quality:0.85,filename:'دفتري'};
-const KEY = 'rizma-settings-v2';
-let S = {...DEF};
-try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e) {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} };
-
-let items = [], uid = 0, pvPage = 0, selected = null;
-const AR = '٠١٢٣٤٥٦٧٨٩';
-const arN = n => String(n).replace(/\d/g, d => AR[d]);
-const num = n => S.digits === 'ar' ? arN(n) : String(n);
-const toLatin = s => s.replace(/[٠-٩]/g, d => AR.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-
-/* ---------- toast & busy ---------- */
-function toast(msg, ms = 2800) {
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; $('#toasts').append(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms);
-}
-function busy(on, title, text, pct) {
-  $('#busy').hidden = !on; if (!on) return;
-  if (title) $('#busyTitle').textContent = title;
-  $('#busyText').textContent = text || ''; $('#busyBar').style.width = (pct || 0) + '%';
-}
-const tick = () => new Promise(r => setTimeout(r, 0));
-
-/* ---------- image processing ---------- */
-function process(it, max) {
-  const img = it.img, sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
-  const k = Math.min(1, max / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
-  const rot = ((it.rot % 360) + 360) % 360, rw = rot % 180 ? h : w, rh = rot % 180 ? w : h;
-  const c1 = document.createElement('canvas'); c1.width = rw; c1.height = rh;
-  const x1 = c1.getContext('2d'); x1.imageSmoothingQuality = 'high';
-  x1.translate(rw / 2, rh / 2); x1.rotate(rot * Math.PI / 180); x1.drawImage(img, -w / 2, -h / 2, w, h);
-  const c = it.crop, l = Math.round(rw * c.l / 100), r = Math.round(rw * c.r / 100), t = Math.round(rh * c.t / 100), b = Math.round(rh * c.b / 100);
-  const cw = Math.max(1, rw - l - r), ch = Math.max(1, rh - t - b);
-  const c2 = document.createElement('canvas'); c2.width = cw; c2.height = ch;
-  const x2 = c2.getContext('2d', {willReadFrequently: true}); x2.drawImage(c1, l, t, cw, ch, 0, 0, cw, ch);
-  if (it.filter !== 'none' || it.bright || it.contrast) {
-    const d = x2.getImageData(0, 0, cw, ch), p = d.data, B = it.bright * 1.2, C = it.contrast * 2.55, f = (259 * (C + 255)) / (255 * (259 - C)), mode = it.filter;
-    for (let i = 0; i < p.length; i += 4) {
-      let R = f * (p[i] - 128) + 128 + B, G = f * (p[i+1] - 128) + 128 + B, Bl = f * (p[i+2] - 128) + 128 + B;
-      if (mode === 'enhance') {
-        const L = .299 * R + .587 * G + .114 * Bl;
-        R = 1.1 * (L + (R - L) * 1.3 - 128) + 132; G = 1.1 * (L + (G - L) * 1.3 - 128) + 132; Bl = 1.1 * (L + (Bl - L) * 1.3 - 128) + 132;
-      } else if (mode !== 'none') {
-        let v = .299 * R + .587 * G + .114 * Bl;
-        if (mode === 'doc') { v = (v - 55) * 255 / 160; if (v > 212) v = 255; }
-        else if (mode === 'bw') v = v > 150 ? 255 : 0;
-        R = G = Bl = v;
-      }
-      p[i] = R; p[i+1] = G; p[i+2] = Bl;
-    }
-    x2.putImageData(d, 0, 0);
-  }
-  return c2;
-}
-const reproc = it => { it.proc = process(it, 2400); };
-
-/* ---------- page model ---------- */
-const grid = () => S.grid.split('x').map(Number);
-function buildPages() {
-  const pages = []; if (S.cover) pages.push({type: 'cover'});
-  const [c, r] = grid(), n = c * r;
-  for (let i = 0; i < items.length; i += n) pages.push({type: 'imgs', items: items.slice(i, i + n)});
-  if (!pages.length) pages.push({type: 'empty'});
-  return pages;
-}
-const headerH = () => S.header.trim() ? 9 : 0;
-const footerH = () => S.pageNum !== 'none' ? 8 : 0;
-function pageDims(page) {
-  const [c, r] = grid(), single = c * r === 1, it = page.type === 'imgs' && page.items[0];
-  if (S.size === 'fit' && single && it) {
-    const m = +S.margin, cw = 210 - 2 * m;
-    return [210, Math.max(60, cw * it.proc.height / it.proc.width + 2 * m + headerH() + footerH())];
-  }
-  const base = SIZES[S.size] || SIZES.A4, lg = Math.max(...base), sm = Math.min(...base);
-  let land;
-  if (S.orient === 'portrait') land = false;
-  else if (S.orient === 'landscape') land = true;
-  else if (S.size === 'Slide') land = !(single && it && it.proc.height > it.proc.width * 1.05);
-  else if (single && it) land = it.proc.width > it.proc.height * 1.05;
-  else land = c > r;
-  return land ? [lg, sm] : [sm, lg];
-}
-function pageLabel(i, total) {
-  const off = S.cover && S.skipCoverNum ? 1 : 0, n = i + 1 - off, N = total - off;
-  if (off && i === 0) return '';
-  return {n: num(n), dash: '— ' + num(n) + ' —', of: num(n) + ' / ' + num(N), page: 'صفحة ' + num(n) + ' من ' + num(N)}[S.numFmt];
-}
-const isDark = hex => { const v = parseInt(hex.slice(1), 16); return (.299 * (v >> 16) + .587 * (v >> 8 & 255) + .114 * (v & 255)) < 110; };
-function rr(x, X, Y, W, H, R) { x.beginPath(); if (R > 0 && x.roundRect) x.roundRect(X, Y, W, H, Math.min(R, W / 2, H / 2)); else x.rect(X, Y, W, H); }
-function wrap(x, text, maxW) {
-  const words = text.split(/\s+/), lines = []; let line = '';
-  for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
-  if (line) lines.push(line); return lines;
-}
-
-function renderPage(cv, page, idx, total, pxmm) {
-  const [W, H] = pageDims(page);
-  cv.width = Math.round(W * pxmm); cv.height = Math.round(H * pxmm);
-  const x = cv.getContext('2d'); x.setTransform(pxmm, 0, 0, pxmm, 0, 0); x.imageSmoothingQuality = 'high';
-  const dark = isDark(S.bg), ink = dark ? '#e8ecf2' : '#1b2330', soft = dark ? 'rgba(232,236,242,.6)' : 'rgba(27,35,48,.55)';
-  x.fillStyle = S.bg; x.fillRect(0, 0, W, H);
-  const pc = dark ? 'rgba(140,170,230,.22)' : 'rgba(60,110,200,.2)';
-  x.lineWidth = .2; x.strokeStyle = pc; x.fillStyle = pc;
-  if (S.pattern === 'lines') {
-    for (let y = 22; y < H - 6; y += 8) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
-    x.strokeStyle = 'rgba(210,70,70,.45)'; x.lineWidth = .3; const mx = S.dir === 'rtl' ? W - 18 : 18;
-    x.beginPath(); x.moveTo(mx, 0); x.lineTo(mx, H); x.stroke();
-  } else if (S.pattern === 'grid') {
-    for (let y = 5; y < H; y += 5) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
-    for (let X = 5; X < W; X += 5) { x.beginPath(); x.moveTo(X, 0); x.lineTo(X, H); x.stroke(); }
-  } else if (S.pattern === 'dots') {
-    for (let y = 5; y < H; y += 5) for (let X = 5; X < W; X += 5) { x.beginPath(); x.arc(X, y, .28, 0, 7); x.fill(); }
-  }
-  x.direction = 'rtl';
-  const m = +S.margin, hh = headerH(), fh = footerH(), inset = Math.max(m, 7), mn = Math.min(W, H);
-
-  if (page.type === 'cover') {
-    const band = H * .38;
-    x.fillStyle = S.accent; x.fillRect(0, 0, W, band);
-    x.fillStyle = 'rgba(255,255,255,.08)';
-    for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(W * .12 + i * 9, band * .25, 30 + i * 14, 0, 7); x.fill(); }
-    x.textAlign = 'right'; const R = W - inset - 6, maxW = W - 2 * inset - 12;
-    x.fillStyle = 'rgba(255,255,255,.85)'; x.font = `500 ${mn * .028}px ${FONT}`;
-    if (S.coverSub) x.fillText(S.coverSub, R, band * .3);
-    x.fillStyle = '#fff'; const ts = mn * .075; x.font = `700 ${ts}px ${DFONT}`;
-    const lines = wrap(x, S.coverTitle || 'عنوان الملف', maxW).slice(0, 3);
-    lines.forEach((ln, i) => x.fillText(ln, R, band - inset - 4 - (lines.length - 1 - i) * ts * 1.25));
-    x.fillStyle = ink; x.font = `600 ${mn * .034}px ${FONT}`;
-    let y = band + mn * .1;
-    if (S.coverName) { x.fillText(S.coverName, R, y); y += mn * .055; }
-    x.fillStyle = soft; x.font = `400 ${mn * .026}px ${FONT}`;
-    if (S.coverDate) x.fillText(S.coverDate, R, y);
-    x.fillStyle = S.accent; x.fillRect(R - 24, y + 8, 24, 1.2);
-    x.fillStyle = soft; x.font = `400 ${mn * .022}px ${FONT}`;
-    x.fillText(num(total - 1) + ' صفحة', R, H - inset - 4);
-  } else if (page.type === 'empty') {
-    x.fillStyle = soft; x.textAlign = 'center'; x.font = `500 ${W * .035}px ${FONT}`;
-    x.fillText('أضف صوراً لتظهر هنا', W / 2, H / 2);
-  } else {
-    if (hh) {
-      x.fillStyle = soft; x.font = `500 3.6px ${FONT}`; x.textAlign = S.dir === 'rtl' ? 'right' : 'left';
-      x.fillText(S.header, S.dir === 'rtl' ? W - inset : inset, Math.max(m, 4) + 5);
-      x.strokeStyle = dark ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.14)'; x.lineWidth = .25;
-      x.beginPath(); x.moveTo(inset, Math.max(m, 4) + 7.2); x.lineTo(W - inset, Math.max(m, 4) + 7.2); x.stroke();
-    }
-    const top = hh ? Math.max(m, 4) + hh : m, bottom = H - (fh ? Math.max(m, 3) + fh : m);
-    const bw = W - 2 * m, bh = Math.max(10, bottom - top);
-    const [cols, rows] = grid(), g = +S.gap, cw = (bw - (cols - 1) * g) / cols, ch = (bh - (rows - 1) * g) / rows;
-    page.items.forEach((it, i) => {
-      let c = i % cols; const r = Math.floor(i / cols); if (S.dir === 'rtl') c = cols - 1 - c;
-      placeImg(x, it.proc, m + c * (cw + g), top + r * (ch + g), cw, ch, pxmm);
-    });
-  }
-  if (S.watermark.trim() && page.type !== 'empty') {
-    x.save(); x.translate(W / 2, H / 2); x.rotate(-Math.atan2(H, W)); x.globalAlpha = +S.wmOpacity;
-    x.fillStyle = dark ? '#fff' : '#000'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    let fs = mn * .14; x.font = `700 ${fs}px ${DFONT}`;
-    const tw = x.measureText(S.watermark).width, lim = Math.hypot(W, H) * .75; if (tw > lim) { fs *= lim / tw; x.font = `700 ${fs}px ${DFONT}`; }
-    x.fillText(S.watermark, 0, 0); x.restore();
-  }
-  if (fh && page.type !== 'empty') {
-    const lbl = pageLabel(idx, total);
-    if (lbl) {
-      x.fillStyle = soft; x.font = `500 3.4px ${FONT}`; x.textBaseline = 'middle';
-      const y = H - Math.max(m, 3) - fh / 2 + 1;
-      x.textAlign = {center: 'center', right: 'right', left: 'left'}[S.pageNum];
-      x.fillText(lbl, S.pageNum === 'center' ? W / 2 : S.pageNum === 'right' ? W - inset : inset, y);
-      x.textBaseline = 'alphabetic';
-    }
-  }
-  return [W, H];
-}
-function placeImg(x, src, cx, cy, cw, ch, pxmm) {
-  const iw = src.width, ih = src.height; let dx, dy, dw, dh, box;
-  if (S.fit === 'stretch') { dx = cx; dy = cy; dw = cw; dh = ch; box = [cx, cy, cw, ch]; }
-  else if (S.fit === 'cover') { const k = Math.max(cw / iw, ch / ih); dw = iw * k; dh = ih * k; dx = cx + (cw - dw) / 2; dy = cy + (ch - dh) / 2; box = [cx, cy, cw, ch]; }
-  else {
-    const k = Math.min(cw / iw, ch / ih); dw = iw * k; dh = ih * k; dx = cx + (cw - dw) / 2;
-    dy = S.valign === 'top' ? cy : S.valign === 'bottom' ? cy + ch - dh : cy + (ch - dh) / 2; box = [dx, dy, dw, dh];
-  }
-  const R = +S.radius;
-  if (S.shadow) { x.save(); x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 2.2 * pxmm; x.shadowOffsetY = .6 * pxmm; x.fillStyle = S.bg; rr(x, ...box, R); x.fill(); x.restore(); }
-  x.save(); rr(x, ...box, R); x.clip(); x.drawImage(src, dx, dy, dw, dh); x.restore();
-  if (+S.border > 0) { x.save(); x.lineWidth = +S.border; x.strokeStyle = S.borderColor; rr(x, ...box, R); x.stroke(); x.restore(); }
-}
-
-/* ---------- preview ---------- */
-let pvQueued = false, lastDir = 0;
-function schedulePreview() { if (pvQueued) return; pvQueued = true; requestAnimationFrame(() => { pvQueued = false; drawPreview(); }); }
-function drawPreview() {
-  const pages = buildPages(); pvPage = Math.max(0, Math.min(pvPage, pages.length - 1));
-  const page = pages[pvPage], [W, H] = pageDims(page), cv = $('#pv');
-  const stage = cv.parentElement, availW = Math.max(180, stage.clientWidth - 30), availH = Math.min(420, Math.max(240, window.innerHeight * .42));
-  const scale = Math.min(availW / W, availH / H), dpr = Math.min(2, window.devicePixelRatio || 1);
-  renderPage(cv, page, pvPage, pages.length, scale * dpr);
-  cv.style.width = Math.round(W * scale) + 'px'; cv.style.height = Math.round(H * scale) + 'px';
-  if (lastDir) { cv.classList.remove('flip-n', 'flip-p'); void cv.offsetWidth; cv.classList.add(lastDir > 0 ? 'flip-n' : 'flip-p'); lastDir = 0; }
-  $('#pvLabel').textContent = arN(pvPage + 1) + ' / ' + arN(pages.length);
-  $('#pvSize').textContent = arN(Math.round(W)) + ' × ' + arN(Math.round(H)) + ' مم';
-  $('#pvPrev').disabled = pvPage === 0; $('#pvNext').disabled = pvPage >= pages.length - 1;
-  const real = pages.filter(p => p.type !== 'empty').length;
-  $('#exportLbl').textContent = $('#exportFabLbl').textContent = real && items.length ? `تنزيل PDF (${arN(real)} صفحة)` : 'تنزيل PDF';
-}
-$('#pvNext').onclick = () => { lastDir = 1; pvPage++; drawPreview(); };
-$('#pvPrev').onclick = () => { lastDir = -1; pvPage--; drawPreview(); };
-window.addEventListener('resize', schedulePreview);
-
-/* ---------- cards ---------- */
-const ICON = {
-  edit: '<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
-  rot: '<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>',
-  dup: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
-  del: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'
-};
-const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-function drawThumb(it, cv) {
-  const p = it.proc, k = Math.min(260 / p.width, 340 / p.height); cv.width = Math.max(1, Math.round(p.width * k)); cv.height = Math.max(1, Math.round(p.height * k));
-  const x = cv.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(p, 0, 0, cv.width, cv.height);
-}
-function makeCard(it) {
-  const el = document.createElement('div'); el.className = 'card'; el.dataset.id = it.id; el.tabIndex = 0;
-  el.innerHTML = `<div class="thumb"><canvas></canvas>${it.sample ? '<span class="tag">مثال</span>' : ''}</div><span class="badge"></span>
-    <div class="meta"><span class="nm"></span></div>
-    <div class="acts"><button data-a="edit" title="تعديل">${svg(ICON.edit)}</button><button data-a="rot" title="تدوير">${svg(ICON.rot)}</button><button data-a="dup" title="تكرار">${svg(ICON.dup)}</button><button data-a="del" class="del" title="حذف">${svg(ICON.del)}</button></div>`;
-  el.querySelector('.nm').textContent = it.name; el.querySelector('.nm').title = it.name;
-  drawThumb(it, el.querySelector('canvas'));
-  return el;
-}
-function syncChip(it, el) {
-  const meta = el.querySelector('.meta'); let chip = meta.querySelector('.pnum');
-  if (!it.scanned && it.pnum == null) { if (chip) chip.remove(); return; }
-  if (meta.querySelector('.pnum-in')) return;
-  if (!chip) { chip = document.createElement('button'); chip.className = 'pnum'; chip.dataset.a = 'pnum'; meta.append(chip); }
-  chip.className = 'pnum ' + (it.pnum != null ? 'found' : 'miss');
-  chip.textContent = it.pnum != null ? 'ص ' + arN(it.pnum) : 'بلا رقم؟';
-  chip.title = 'رقم الصفحة المكتوب على الصورة. اضغط لتعديله';
-}
-function renderGrid() {
-  const g = $('#grid'), have = new Map([...g.children].map(e => [e.dataset.id, e]));
-  const els = items.map((it, i) => {
-    let el = have.get(String(it.id)); if (!el) el = makeCard(it); have.delete(String(it.id));
-    el.querySelector('.badge').textContent = arN(i + 1);
-    el.classList.toggle('sel', selected === it.id);
-    syncChip(it, el);
-    return el;
-  });
-  have.forEach(e => e.remove());
-  els.forEach(e => g.append(e));
-  $('#empty').hidden = items.length > 0;
-  const pages = buildPages().filter(p => p.type !== 'empty').length;
-  $('#count').innerHTML = `${arN(items.length)} صورة<small>${items.length ? arN(pages) + ' صفحة' : ''}</small>`;
-  $('#sampleBanner').hidden = !items.some(i => i.sample);
-  $('#autoSort').disabled = items.length < 2;
-  $('#scanAll').checked = items.length > 0 && items.every(i => i.filter === 'doc');
-  schedulePreview();
-}
-const byId = id => items.find(i => i.id === +id);
-function jumpTo(it) {
-  const per = grid()[0] * grid()[1], p = Math.floor(items.indexOf(it) / per) + (S.cover ? 1 : 0);
-  lastDir = p > pvPage ? 1 : p < pvPage ? -1 : 0; pvPage = p; selected = it.id;
-  $$('.card').forEach(c => c.classList.toggle('sel', c.dataset.id == it.id)); drawPreview();
-}
-function editNum(it, chip) {
-  const inp = document.createElement('input'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.className = 'pnum-in';
-  inp.value = it.pnum != null ? it.pnum : ''; inp.placeholder = 'رقم'; inp.setAttribute('aria-label', 'رقم الصفحة');
-  chip.replaceWith(inp); inp.focus(); inp.select();
-  let done = false;
-  const finish = ok => {
-    if (done) return; done = true;
-    if (ok) { const v = parseInt(toLatin(inp.value), 10); it.pnum = isNaN(v) ? null : v; it.scanned = true; it.manual = true; }
-    inp.remove(); renderGrid();
-  };
-  inp.onkeydown = e => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); e.stopPropagation(); };
-  inp.onblur = () => finish(true);
-  inp.onclick = e => e.stopPropagation();
-}
-$('#grid').addEventListener('click', e => {
-  const card = e.target.closest('.card'); if (!card) return; const it = byId(card.dataset.id), a = e.target.closest('[data-a]')?.dataset.a;
-  if (a === 'pnum') editNum(it, e.target.closest('.pnum'));
-  else if (a === 'edit') openEditor(it);
-  else if (a === 'rot') { it.rot = (it.rot + 90) % 360; reproc(it); it.scanned = it.manual; const c = card.querySelector('canvas'); drawThumb(it, c); c.animate([{transform:'rotate(-90deg) scale(.85)'},{transform:'none'}], {duration:350, easing:'cubic-bezier(.3,1.3,.5,1)'}); schedulePreview(); }
-  else if (a === 'dup') { const cp = {...it, id: ++uid, crop: {...it.crop}}; items.splice(items.indexOf(it) + 1, 0, cp); renderGrid(); toast('تم تكرار الصورة'); }
-  else if (a === 'del') { card.animate([{opacity:1, transform:'none'},{opacity:0, transform:'scale(.8)'}], {duration:200}).onfinish = () => { items = items.filter(i => i !== it); if (selected === it.id) selected = null; renderGrid(); }; }
-  else jumpTo(it);
-});
-$('#grid').addEventListener('dblclick', e => { const card = e.target.closest('.card'); if (card && !e.target.closest('[data-a]')) openEditor(byId(card.dataset.id)); });
-$('#grid').addEventListener('keydown', e => {
-  if (e.target.classList.contains('pnum-in')) return;
-  const card = e.target.closest('.card'); if (!card || e.target !== card) return; const it = byId(card.dataset.id);
-  if (e.key === 'Enter') openEditor(it);
-  if (e.key === 'Delete') { items = items.filter(i => i !== it); renderGrid(); }
-});
-if (window.Sortable) Sortable.create($('#grid'), {animation: 220, easing: 'cubic-bezier(.2,1,.3,1)', ghostClass: 'ghost-card', chosenClass: 'chosen-card',
-  filter: 'button, input', preventOnFilter: false, delay: 120, delayOnTouchOnly: true,
-  onEnd() { const ids = [...$('#grid').children].map(e => +e.dataset.id); items.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); renderGrid(); }});
-
-/* ---------- adding files ---------- */
-function loadImg(src) { return new Promise((res, rej) => { const im = new Image(); im.decoding = 'async'; im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
-const newItem = (name, img, extra) => ({id: ++uid, name, img, rot: 0, filter: 'none', bright: 0, contrast: 0, crop: {t:0,r:0,b:0,l:0}, date: Date.now(), pnum: null, scanned: false, ...extra});
-async function addFiles(list) {
-  const files = [...list].filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(f.name));
-  if (!files.length) { toast('لم أجد صوراً في ما أضفته'); return; }
-  if (items.some(i => i.sample)) items = items.filter(i => !i.sample);
-  const scan = S.kind === 'notes';
-  const many = files.length > 2; if (many) busy(true, 'جارٍ إضافة الصور…', '', 0);
-  let bad = 0;
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
-    try {
-      const im = await loadImg(URL.createObjectURL(f));
-      const it = newItem(f.name || 'صورة.png', im, {date: f.lastModified || Date.now(), filter: scan ? 'doc' : 'none'});
-      reproc(it); items.push(it);
-    } catch (e) { bad++; }
-    if (many) { busy(true, null, arN(i + 1) + ' من ' + arN(files.length), (i + 1) / files.length * 100); await tick(); }
-  }
-  busy(false); renderGrid();
-  if (bad) toast(`تعذّر فتح ${arN(bad)} صورة. إذا كانت من آيفون (HEIC) حوّلها إلى JPG أولاً`, 5200);
-  else toast(`أضيفت ${arN(files.length)} صورة` + (items.length > 1 ? '. جرّب «رتّب حسب رقم الصفحة»' : ''));
-}
-const pick = () => $('#file').click();
-$('#addTop').onclick = pick; $('#empty').onclick = pick;
-$('#empty').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } };
-$('#file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
-let dragN = 0;
-const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
-window.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); dragN++; $('#drop').classList.add('show'); });
-window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
-window.addEventListener('dragleave', e => { if (!hasFiles(e)) return; if (--dragN <= 0) { dragN = 0; $('#drop').classList.remove('show'); } });
-window.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragN = 0; $('#drop').classList.remove('show'); addFiles(e.dataTransfer.files); });
-window.addEventListener('paste', e => {
-  if (e.target.matches && e.target.matches('input')) return;
-  const fs = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
-  if (fs.length) { e.preventDefault(); addFiles(fs); }
-});
-
-/* ---------- toolbar ---------- */
-$('#sortBtn').onclick = e => { e.stopPropagation(); $('#sortPop').hidden = !$('#sortPop').hidden; };
-document.addEventListener('click', () => { $('#sortPop').hidden = true; });
-$('#sortPop').addEventListener('click', e => {
-  const k = e.target.dataset.sort; if (!k) return;
-  if (k === 'name') items.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
-  else if (k === 'date') items.sort((a, b) => a.date - b.date); else items.reverse();
-  renderGrid(); flashMoved(); toast('تمت إعادة الترتيب');
-});
-function flashMoved() { $$('.card').forEach((c, i) => setTimeout(() => { c.classList.remove('moved'); void c.offsetWidth; c.classList.add('moved'); }, i * 40)); }
-$('#clearAll').onclick = () => {
-  if (!items.length) return;
-  const b = $('#clearAll'), t = b.querySelector('span');
-  if (!b.dataset.arm) { b.dataset.arm = 1; t.textContent = 'اضغط مجدداً للتأكيد'; setTimeout(() => { delete b.dataset.arm; t.textContent = 'مسح الكل'; }, 3000); return; }
-  delete b.dataset.arm; t.textContent = 'مسح الكل'; items = []; selected = null; renderGrid(); toast('تم مسح كل الصور');
-};
-$('#dropSamples').onclick = () => { items = items.filter(i => !i.sample); renderGrid(); };
-async function applyAll(fn, label) {
-  if (!items.length) return; busy(true, label, '', 0);
-  for (let i = 0; i < items.length; i++) { fn(items[i]); reproc(items[i]); busy(true, null, arN(i + 1) + ' من ' + arN(items.length), (i + 1) / items.length * 100); await tick(); }
-  busy(false); $('#grid').replaceChildren(); renderGrid();
-}
-$('#scanAll').onchange = e => { const on = e.target.checked; applyAll(it => { it.filter = on ? 'doc' : 'none'; }, on ? 'تحسين الصور…' : 'إرجاع الألوان الأصلية…'); };
-$('#numOn').onchange = e => set('pageNum', e.target.checked ? (S.pageNum !== 'none' ? S.pageNum : 'center') : 'none');
-
-/* ---------- page-number reading (OCR) ---------- */
-let ocrWorker = null;
-function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.append(s); }); }
-async function getWorker(onProg) {
-  if (ocrWorker) return ocrWorker;
-  if (!window.Tesseract) await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
-  ocrWorker = await Tesseract.createWorker('eng', 1, {logger: m => { if (m.status && m.progress != null) onProg(m); }});
-  await ocrWorker.setParameters({tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '11'});
-  return ocrWorker;
-}
-function strip(src, y0, y1) {
-  const sh = Math.round(src.height * (y1 - y0)), k = Math.min(2.5, 1800 / src.width);
-  const c = document.createElement('canvas'); c.width = Math.round(src.width * k); c.height = Math.round(sh * k);
-  const x = c.getContext('2d', {willReadFrequently: true}); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
-  x.drawImage(src, 0, Math.round(src.height * y0), src.width, sh, 0, 0, c.width, c.height);
-  const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
-  for (let i = 0; i < p.length; i += 4) { let v = .299 * p[i] + .587 * p[i+1] + .114 * p[i+2]; v = (v - 70) * 255 / 130; p[i] = p[i+1] = p[i+2] = v < 0 ? 0 : v > 255 ? 255 : v; }
-  x.putImageData(d, 0, 0); return c;
-}
-async function readNumber(w, it) {
-  const zones = S.numPos === 'top' ? [[0, .16, 'top']] : S.numPos === 'bottom' ? [[.86, 1, 'bottom']] : [[0, .16, 'top'], [.86, 1, 'bottom']];
-  let best = null;
-  for (const [a, b, where] of zones) {
-    const c = strip(it.proc, a, b), {data} = await w.recognize(c);
-    for (const wd of (data.words || [])) {
-      const t = toLatin(wd.text).replace(/[^0-9]/g, '');
-      if (!t || t.length > 3) continue;
-      const v = parseInt(t, 10); if (!v || v > 999) continue;
-      const cx = (wd.bbox.x0 + wd.bbox.x1) / 2 / c.width, edge = Math.abs(cx - .5) * 2;
-      const vy = (wd.bbox.y0 + wd.bbox.y1) / 2 / c.height, nearEdge = where === 'top' ? 1 - vy : vy;
-      const score = wd.confidence + edge * 12 + nearEdge * 8 + (where === 'top' ? 6 : 0) - (wd.confidence < 35 ? 40 : 0);
-      if (!best || score > best.score) best = {v, score};
-    }
-    if (best && best.score > 80 && where === 'top') break;
-  }
-  return best && best.score > 30 ? best.v : null;
-}
-function sortByPnum() {
-  let prev = -1;
-  const keyed = items.map((it, i) => { const k = it.pnum != null ? it.pnum : prev + .001 * (i + 1); if (it.pnum != null) prev = it.pnum; return [k, i, it]; });
-  keyed.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  items = keyed.map(k => k[2]);
-}
-$('#autoSort').onclick = async () => {
-  const todo = items.filter(i => !i.scanned);
-  if (todo.length) {
-    busy(true, 'تحميل قارئ الأرقام…', 'أول مرة فقط، قد يستغرق بضع ثوانٍ', 4);
-    let w;
-    try { w = await getWorker(m => { if (/load|init/i.test(m.status)) busy(true, null, 'تحميل قارئ الأرقام… ' + arN(Math.round(m.progress * 100)) + '٪', 4 + m.progress * 10); }); }
-    catch (e) { busy(false); toast('تعذّر تحميل قارئ الأرقام. تأكد من اتصال الإنترنت. يمكنك كتابة الأرقام يدوياً تحت كل صورة', 6000); console.error(e); items.forEach(i => i.scanned = true); renderGrid(); return; }
-    for (let i = 0; i < todo.length; i++) {
-      const it = todo[i], card = $(`.card[data-id="${it.id}"] .thumb`);
-      busy(true, 'أقرأ أرقام الصفحات…', 'صورة ' + arN(i + 1) + ' من ' + arN(todo.length), 15 + i / todo.length * 85);
-      const sl = document.createElement('div'); sl.className = 'scanline'; card && card.append(sl);
-      try { it.pnum = await readNumber(w, it); } catch (e) { it.pnum = null; console.error(e); }
-      it.scanned = true; sl.remove();
-    }
-    busy(false);
-  }
-  const before = items.map(i => i.id).join();
-  sortByPnum(); renderGrid();
-  if (items.map(i => i.id).join() !== before) flashMoved();
-  const found = items.filter(i => i.pnum != null).length, miss = items.length - found;
-  toast(miss ? `قرأت أرقام ${arN(found)} من ${arN(items.length)} صفحة ورتبتها. الصفحات المعلَّمة بالأصفر بلا رقم، اكتب رقمها بالضغط عليها` : `قرأت كل الأرقام ورتبت ${arN(items.length)} صفحة`, miss ? 6000 : 3200);
-};
-
-/* ---------- settings binding ---------- */
-const fmtOut = {margin: v => arN(v) + ' مم', gap: v => arN(v) + ' مم', border: v => +v ? arN(v) + ' مم' : 'بدون', radius: v => arN(v) + ' مم', wmOpacity: v => arN(Math.round(v * 100)) + '٪', quality: v => arN(Math.round(v * 100)) + '٪'};
-function syncUI() {
-  $$('[data-k]').forEach(el => {
-    const k = el.dataset.k;
-    if (el.classList.contains('seg')) el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === String(S[k])));
-    else if (el.type === 'checkbox') el.checked = !!S[k];
-    else if (document.activeElement !== el) el.value = S[k];
-  });
-  $$('[data-out]').forEach(o => { const k = o.dataset.out; o.textContent = fmtOut[k] ? fmtOut[k](S[k]) : S[k]; });
-  $$('#gridpick button').forEach(b => b.classList.toggle('on', b.dataset.v === S.grid));
-  $$('#bgcolors .sw').forEach(b => b.classList.toggle('on', b.dataset.c === S.bg));
-  $$('#accents .sw').forEach(b => b.classList.toggle('on', b.dataset.c === S.accent));
-  $$('.kind').forEach(b => b.classList.toggle('on', b.dataset.kind === S.kind));
-  $('#numOn').checked = S.pageNum !== 'none';
-  document.documentElement.style.setProperty('--accent', S.accent);
-}
-function set(k, v) { S[k] = v; save(); syncUI(); if (k === 'grid' || k === 'cover') renderGrid(); else schedulePreview(); }
-$$('[data-k]').forEach(el => {
-  const k = el.dataset.k;
-  if (el.classList.contains('seg')) el.addEventListener('click', e => { const b = e.target.closest('button'); if (b) set(k, b.dataset.v); });
-  else el.addEventListener('input', () => set(k, el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value));
-});
-GRIDS.forEach(gv => {
-  const [c, r] = gv.split('x').map(Number), b = document.createElement('button'); b.dataset.v = gv; b.title = arN(c * r) + ' في الصفحة';
-  b.innerHTML = `<span class="mini" style="grid-template-columns:repeat(${c},1fr);grid-template-rows:repeat(${r},1fr)">${'<span></span>'.repeat(c * r)}</span>${arN(c * r)}`;
-  b.onclick = () => set('grid', gv); $('#gridpick').append(b);
-});
-const swatches = (box, list, key) => list.forEach(c => {
-  const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.c = c; b.setAttribute('aria-label', c);
-  b.onclick = () => set(key, c); $(box).append(b);
-});
-swatches('#bgcolors', BGS, 'bg'); swatches('#accents', ACCENTS, 'accent');
-const bgCustom = document.createElement('input'); bgCustom.type = 'color'; bgCustom.title = 'لون مخصص'; bgCustom.setAttribute('aria-label', 'لون خلفية مخصص');
-bgCustom.oninput = () => set('bg', bgCustom.value); $('#bgcolors').append(bgCustom);
-$('#resetSettings').onclick = () => { S = {...DEF}; save(); syncUI(); renderGrid(); toast('رجعت الإعدادات الافتراضية'); };
-
-/* drawer */
-const openAdv = () => { $('#drawer').hidden = false; $('#scrim').hidden = false; };
-const closeAdv = () => { $('#drawer').hidden = true; $('#scrim').hidden = true; };
-$('#openAdv').onclick = openAdv; $('#closeAdv').onclick = closeAdv; $('#scrim').onclick = closeAdv;
-$('#tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.pane').forEach(p => p.hidden = p.dataset.p !== b.dataset.t); };
-
-/* ---------- kinds (presets) ---------- */
-const KINDS = [
-  {id: 'notes', name: 'دفتر جامعي', desc: 'صفحة لكل صورة، ممسوحة ضوئياً', icon: '<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6zM6 3v18M10 8h5M10 12h5"/>',
-    s: {size:'A4', orient:'auto', grid:'1x1', fit:'contain', margin:6, gap:4, border:0, radius:0, shadow:false, pageNum:'center', numFmt:'n'}, filter: 'doc'},
-  {id: 'summary', name: 'تلاخيص', desc: 'صورتان في كل صفحة مع إطار', icon: '<path d="M5 4h14v7H5zM5 13h14v7H5z"/>',
-    s: {size:'A4', orient:'portrait', grid:'1x2', fit:'contain', margin:10, gap:6, border:.3, radius:2, shadow:false, pageNum:'center', numFmt:'page'}},
-  {id: 'slides', name: 'سلايدات', desc: 'شريحة 16:9 لكل صفحة', icon: '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 21h8M12 17v4"/>',
-    s: {size:'Slide', orient:'auto', grid:'1x1', fit:'contain', margin:0, gap:0, border:0, radius:0, shadow:false, pageNum:'none'}, filter: 'none'},
-  {id: 'handout', name: 'سلايدات للطباعة', desc: '٣ شرائح في ورقة A4', icon: '<path d="M6 3h12v18H6zM9 6h6v3H9zM9 11h6v3H9zM9 16h6v2H9z"/>',
-    s: {size:'A4', orient:'portrait', grid:'1x3', fit:'contain', margin:12, gap:8, border:.3, radius:1.5, shadow:true, pageNum:'center', numFmt:'of'}, filter: 'none'}
-];
-KINDS.forEach(p => {
-  const b = document.createElement('button'); b.className = 'kind'; b.dataset.kind = p.id;
-  b.innerHTML = `<span class="ic">${svg(p.icon)}</span><div><b>${p.name}</b><span>${p.desc}</span></div>`;
-  b.onclick = async () => {
-    Object.assign(S, p.s, {kind: p.id}); save(); syncUI(); pvPage = 0; renderGrid();
-    if (p.filter && items.some(i => i.filter !== p.filter)) await applyAll(it => { it.filter = p.filter; }, 'تجهيز الصور…');
-  };
-  $('#kinds').append(b);
-});
-
-/* ---------- editor ---------- */
-let edIt = null, draft = null, edQ = false;
-function openEditor(it) {
-  edIt = it; draft = {rot: it.rot, filter: it.filter, bright: it.bright, contrast: it.contrast, crop: {...it.crop}};
-  $('#editor').hidden = false; syncEditor(); $('#edSave').focus();
-}
-function syncEditor() {
-  $$('#edFilters button').forEach(b => b.classList.toggle('on', b.dataset.f === draft.filter));
-  $('#edBright').value = draft.bright; $('#oBright').textContent = arN(draft.bright);
-  $('#edContrast').value = draft.contrast; $('#oContrast').textContent = arN(draft.contrast);
-  for (const s of ['t','b','r','l']) { $('#ed' + s.toUpperCase()).value = draft.crop[s]; $('#o' + s.toUpperCase()).textContent = arN(draft.crop[s]) + '٪'; }
-  if (!edQ) { edQ = true; requestAnimationFrame(() => { edQ = false; if (!edIt) return; const c = process({...draft, img: edIt.img}, 1100), cv = $('#edCanvas'); cv.width = c.width; cv.height = c.height; cv.getContext('2d').drawImage(c, 0, 0); }); }
-}
-const closeEditor = () => { $('#editor').hidden = true; edIt = null; };
-$('#edFilters').onclick = e => { const b = e.target.closest('button'); if (b) { draft.filter = b.dataset.f; syncEditor(); } };
-$('#edBright').oninput = e => { draft.bright = +e.target.value; syncEditor(); };
-$('#edContrast').oninput = e => { draft.contrast = +e.target.value; syncEditor(); };
-for (const s of ['t','b','r','l']) $('#ed' + s.toUpperCase()).oninput = e => { draft.crop[s] = +e.target.value; syncEditor(); };
-$('#edRotR').onclick = () => { draft.rot = (draft.rot + 90) % 360; syncEditor(); };
-$('#edRotL').onclick = () => { draft.rot = (draft.rot + 270) % 360; syncEditor(); };
-$('#edReset').onclick = () => { draft = {rot: 0, filter: 'none', bright: 0, contrast: 0, crop: {t:0,r:0,b:0,l:0}}; syncEditor(); };
-$('#edCancel').onclick = closeEditor;
-$('#editor').addEventListener('click', e => { if (e.target.id === 'editor') closeEditor(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#editor').hidden) closeEditor(); else if (!$('#drawer').hidden) closeAdv(); } });
-$('#edSave').onclick = () => {
-  const it = edIt, geo = it.rot !== draft.rot || JSON.stringify(it.crop) !== JSON.stringify(draft.crop);
-  Object.assign(it, draft, {crop: {...draft.crop}}); reproc(it); if (geo && !it.manual) it.scanned = false;
-  const card = $(`.card[data-id="${it.id}"]`); if (card) drawThumb(it, card.querySelector('canvas'));
-  closeEditor(); renderGrid(); jumpTo(it); toast('حُفظت التعديلات');
-};
-
-/* ---------- export ---------- */
-let DL = null;
-const dlReady = (async () => { try { if (window.claude && window.claude.use) DL = await window.claude.use('downloads'); } catch (e) { DL = null; } })();
-async function exportPDF() {
-  if (!items.length) { toast('أضف صوراً أولاً'); return; }
-  if (!window.jspdf) { toast('تعذّر تحميل مكتبة PDF. تحقق من الاتصال وأعد تحميل الصفحة', 5000); return; }
-  const pages = buildPages().filter(p => p.type !== 'empty'), pxmm = +S.dpi / 25.4, cv = document.createElement('canvas');
-  busy(true, 'جارٍ إنشاء الملف…', '', 0); await tick();
-  try {
-    let doc;
-    for (let i = 0; i < pages.length; i++) {
-      const [W, H] = renderPage(cv, pages[i], i, pages.length, pxmm), o = W > H ? 'l' : 'p';
-      const data = cv.toDataURL('image/jpeg', +S.quality);
-      if (!doc) doc = new jspdf.jsPDF({unit: 'mm', format: [W, H], orientation: o, compress: true}); else doc.addPage([W, H], o);
-      doc.addImage(data, 'JPEG', 0, 0, W, H, undefined, 'FAST');
-      busy(true, null, 'صفحة ' + arN(i + 1) + ' من ' + arN(pages.length), (i + 1) / pages.length * 100); await tick();
-    }
-    doc.setProperties({title: S.coverTitle || S.filename, creator: 'رزمة'});
-    const blob = doc.output('blob'), mb = (blob.size / 1048576).toFixed(1);
-    const filename = ((S.filename || 'رزمة').replace(/[\\/:*?"<>|]+/g, '').trim() || 'رزمة') + '.pdf';
-    await dlReady; busy(false);
-    if (DL) {
-      try { await DL.save({filename, data: blob}); toast('تم حفظ ' + filename + ' (' + arN(mb) + ' م.ب)'); return; }
-      catch (e) { if (e && e.code === 'declined') { toast('أُلغي الحفظ'); return; } }
-    }
-    const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    toast('تم تنزيل ' + filename + ' (' + arN(mb) + ' م.ب)');
-  } catch (e) { busy(false); toast('تعذّر إنشاء الملف. جرّب دقة أقل من الإعدادات المتقدمة', 5000); console.error(e); }
-}
-$('#exportBtn').onclick = exportPDF; $('#exportFab').onclick = exportPDF;
-
-/* ---------- example pages (deliberately out of order) ---------- */
-function sampleCanvas(n, title, lines, digits) {
-  const c = document.createElement('canvas'), x = c.getContext('2d'); c.width = 1240; c.height = 1700;
-  x.fillStyle = '#6b6258'; x.fillRect(0, 0, 1240, 1700);
-  x.save(); x.translate(620, 850); x.rotate((n % 2 ? -1 : 1) * .01); x.fillStyle = '#f4efe2'; x.shadowColor = 'rgba(0,0,0,.4)'; x.shadowBlur = 30; x.fillRect(-570, -800, 1140, 1600); x.restore();
-  x.strokeStyle = 'rgba(80,120,190,.35)'; x.lineWidth = 2; for (let y = 250; y < 1600; y += 62) { x.beginPath(); x.moveTo(70, y); x.lineTo(1170, y); x.stroke(); }
-  x.strokeStyle = 'rgba(200,60,60,.5)'; x.beginPath(); x.moveTo(1050, 70); x.lineTo(1050, 1630); x.stroke();
-  x.direction = 'rtl'; x.textAlign = 'right';
-  x.fillStyle = '#1d2b5c'; x.font = `600 64px ${FONT}`; x.textAlign = 'left'; x.direction = 'ltr';
-  x.fillText(digits === 'ar' ? arN(n) : String(n), 110, 150);
-  x.direction = 'rtl'; x.textAlign = 'right'; x.font = `700 50px ${DFONT}`; x.fillText(title, 1020, 225);
-  x.font = `500 36px ${FONT}`; lines.forEach((t, i) => x.fillText(t, 1020, 360 + i * 124));
-  return c;
-}
-async function loadSamples() {
-  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]); await document.fonts.load(`700 20px "Readex Pro"`); await document.fonts.load(`500 20px "IBM Plex Sans Arabic"`); } catch (e) {}
-  if (items.length) return;
-  const defs = [
-    [14, 'تابع: الاتصال', ['الدالة متصلة عند a إذا:', '١) f(a) معرّفة', '٢) النهاية موجودة', '٣) النهاية = f(a)'], 'en'],
-    [12, 'المحاضرة ٣ — النهايات', ['تعريف: نهاية الدالة عند a تساوي L', 'إذا اقتربت f(x) من L كلما اقترب x من a', 'مثال: lim (x² − 1)/(x − 1) = 2'], 'en'],
-    [15, 'أمثلة محلولة', ['مثال ١: ابحث في اتصال الدالة', 'f(x) = |x| عند x = 0', 'الحل: النهاية من اليمين = اليسار = 0'], 'ar'],
-    [13, 'النهايات عند اللانهاية', ['lim 1/x = 0 عندما x → ∞', 'نقسم على أعلى قوة في المقام', 'واجب: تمارين ٤ إلى ٩ صفحة ٧٢'], 'en']
-  ];
-  const names = ['IMG_3921.jpg', 'IMG_4107.jpg', 'IMG_3388.jpg', 'IMG_4650.jpg'];
-  for (const [n, t, l, d] of defs) {
-    const im = await loadImg(sampleCanvas(n, t, l, d).toDataURL('image/jpeg', .9));
-    const it = newItem(names.shift(), im, {sample: true, filter: S.kind === 'notes' ? 'doc' : 'none'});
-    reproc(it); if (!items.some(i => !i.sample)) items.push(it);
-  }
-  renderGrid();
-}
-
-syncUI(); renderGrid(); loadSamples();
-if (document.fonts) document.fonts.ready.then(schedulePreview);
-})();
-</script>
+<script src="assets/scan.js"></script>
+<script src="assets/ocr.js"></script>
+<script src="assets/app.js"></script>
 </body>
 </html>
