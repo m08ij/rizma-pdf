@@ -280,6 +280,21 @@
 
   /* Reads one page. src: canvas (unfiltered, upright). Returns {v, conf, box, sure} or null. box is normalized to src. */
   async function readPage(src, pos, onStep) {
+    // handwritten notebooks: a circled number or a "lecture 25" heading at the top of the page
+    if (window.Hand && pos !== 'bottom') {
+      try {
+        await Hand.load();
+        const h = Hand.readTop(src).filter(c => !c.crossed);
+        if (h.length && h[0].conf >= .3) {
+          const b = h[0], rival = h.find(c => c.v !== b.v && c.kind === b.kind);
+          // the net is often confident on a bad cut, so a circled number counts as sure only when the
+          // different ways of separating it from the ring agree
+          const sure = (b.kind === 'circle' ? b.conf >= .9 && b.agree >= .8 : b.conf >= .95) && (!rival || rival.score < b.score * .75);
+          onStep && onStep(1);
+          return {v: b.v, conf: 1 + b.conf, box: b.box, sure, kind: b.kind, opts: b.opts || [b.v], alt: rival ? rival.v : null, debug: h.slice(0, 4).map(c => ({v: c.v, conf: +c.conf.toFixed(2), kind: c.kind}))};
+        }
+      } catch (e) { console.warn(e); }
+    }
     const w = await getDigitWorker();
     const cands = [];
     const add = (c, z, how) => {
@@ -363,8 +378,23 @@
       if (s.length > 1) for (let i = 0; i < s.length; i++) out.add(+(s.slice(0, i) + s.slice(i + 1)));
       return [...out].filter(v => v > 0);
     };
+    // when many pages share numbers, the numbers mark lectures or sections rather than pages: repeats are expected
+    const repeats = (all.length - used.size) / all.length > .15;
+    if (repeats) {
+      // numbers read with confidence are anchors; a doubtful page whose reading matches no anchor but whose
+      // alternative reading does (a "lecture 26" heading among circled 26s) takes that alternative
+      const anchors = new Map();
+      for (const it of all) if (it.manual || !it.unsure) anchors.set(it.pnum, (anchors.get(it.pnum) || 0) + 1);
+      for (const it of auto) {
+        if (!it.popts || it.popts.length < 2) continue;
+        const own = (anchors.get(it.pnum) || 0) - (it.unsure ? 0 : 1);
+        if (own > 0) continue;
+        const alt = it.popts.filter(v => v !== it.pnum && anchors.get(v)).sort((a, b) => anchors.get(b) - anchors.get(a))[0];
+        if (alt != null) { it.palt = it.pnum; it.pnum = alt; it.unsure = true; }
+      }
+    }
     for (const it of auto) {
-      const dup = all.filter(o => o !== it && o.pnum === it.pnum);
+      const dup = repeats ? [] : all.filter(o => o !== it && o.pnum === it.pnum);
       const far = Math.abs(it.pnum - med) > span;
       if (!dup.length && !far) continue;
       if (dup.length && dup.some(o => o.manual || (o.pconf || 0) > (it.pconf || 0))) {
@@ -372,8 +402,10 @@
         if (f) { it.palt = it.pnum; it.pnum = f; gaps.splice(gaps.indexOf(f), 1); }
         it.unsure = true;
       } else if (far) {
-        const f = fixes(String(it.pnum)).find(v => gaps.includes(v));
-        if (f) { it.palt = it.pnum; it.pnum = f; gaps.splice(gaps.indexOf(f), 1); }
+        // numbers that repeat (lectures) leave no meaningful gaps: only take a reading other pages confirm
+        const f = repeats ? (it.popts || []).concat(fixes(String(it.pnum))).find(v => v !== it.pnum && all.some(o => o !== it && o.pnum === v && !o.unsure))
+          : fixes(String(it.pnum)).find(v => gaps.includes(v));
+        if (f) { it.palt = it.pnum; it.pnum = f; if (gaps.includes(f)) gaps.splice(gaps.indexOf(f), 1); }
         it.unsure = true;
       }
     }

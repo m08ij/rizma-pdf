@@ -83,6 +83,21 @@
     return true;
   };
 
+  /* Rows [top, bottom) that remain after removing a full-width white strip at either edge. */
+  function bands(g, sat, w, h) {
+    const bright = y => { let n = 0; for (let x = 0, i = y * w; x < w; x++, i++) if (g[i] > 226 && sat[i] < 28) n++; return n / w; };
+    const run = (from, step) => {
+      let y = from, k = 0;
+      while (k < h * .16 && bright(y) > .5) { y += step; k++; }
+      if (k < h * .02 || k >= h * .16) return from;
+      // the strip must end sharply: the row beyond it is mostly not white
+      let s = 0; for (let j = 1; j <= 3; j++) s += bright(y + step * j);
+      return s / 3 < .25 ? y + step * 2 : from;
+    };
+    const top = run(0, 1), bot = run(h - 1, -1);
+    return [top === 0 ? 0 : top, bot === h - 1 ? h : bot];
+  }
+
   /* Returns normalized quad or null when no clear sheet is found (e.g. the page already fills the photo). */
   function detect(img) {
     const {g, sat, w, h} = grayOf(img, 420);
@@ -92,6 +107,9 @@
     const b = blur(score, w, h, 3), t = otsu(b);
     const mask = new Uint8Array(g.length);
     for (let i = 0; i < b.length; i++) mask[i] = b[i] > t ? 1 : 0;
+    // phone camera label strips (a flat white band glued to the top or bottom edge) are not paper
+    const [cutTop, cutBot] = bands(g, sat, w, h);
+    mask.fill(0, 0, cutTop * w); mask.fill(0, cutBot * w);
     const {lab, L, n} = largest(mask, w, h);
     if (n < w * h * .15) return null;
     // close holes by using row extents of the component
@@ -113,7 +131,8 @@
     const a = area(quad);
     if (!convex(quad) || a < .18) return null;
     // sheet fills the photo already: nothing useful to crop
-    if (a > .93 || touch > h * 1.2) return null;
+    const top = Math.min(quad[0].y, quad[1].y), bot = Math.max(quad[2].y, quad[3].y);
+    if (a > .93 || (touch > h * 1.2 && top < .04 && bot > .96)) return null;
     // pull corners 0.4% inwards so the table edge does not show
     const cx = quad.reduce((s, p) => s + p.x, 0) / 4, cy = quad.reduce((s, p) => s + p.y, 0) / 4;
     return quad.map(p => ({x: p.x + (cx - p.x) * .008, y: p.y + (cy - p.y) * .008}));

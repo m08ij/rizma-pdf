@@ -100,7 +100,7 @@ const reproc = it => { it.proc = process(it, 2400); it.dirty = true; };
 const resetRead = it => { if (!it.manual) { it.scanned = false; it.pbox = null; it.unsure = false; } else it.pbox = null; };
 
 /* ---------- history (undo / redo) ---------- */
-const F = ['rot','filter','bright','contrast','quad','crop','pnum','pconf','pbox','unsure','palt','scanned','manual'];
+const F = ['rot','filter','bright','contrast','quad','crop','pnum','pconf','pbox','unsure','palt','phead','popts','scanned','manual'];
 const snap = () => items.map(it => [it, Object.fromEntries(F.map(k => [k, clone(it[k])]))]);
 let past = [], future = [];
 function remember() { past.push(snap()); if (past.length > 60) past.shift(); future = []; syncHistory(); }
@@ -510,7 +510,8 @@ document.addEventListener('keydown', e => {
 function sortByPnum() {
   let prev = -1;
   const keyed = items.map((it, i) => { const k = it.pnum != null ? it.pnum : prev + .001 * (i + 1); if (it.pnum != null) prev = it.pnum; return [k, i, it]; });
-  keyed.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  // same number: the page that opens the section ("lecture 25") goes first
+  keyed.sort((a, b) => a[0] - b[0] || (b[2].phead ? 1 : 0) - (a[2].phead ? 1 : 0) || a[1] - b[1]);
   items = keyed.map(k => k[2]);
 }
 async function autoSort() {
@@ -527,7 +528,7 @@ async function autoSort() {
       try {
         const src = process({...it, filter: 'none', bright: 0, contrast: 0}, 2400);
         const r = await OCR.readPage(src, S.numPos, f => busy(true, null, 'صورة ' + arN(i + 1) + ' من ' + arN(todo.length), base + f * 92 / todo.length));
-        if (r) { it.pnum = r.v; it.pconf = r.conf; it.pbox = r.box; it.unsure = !r.sure; it.palt = null; } else { it.pnum = null; it.pbox = null; it.unsure = false; }
+        if (r) { it.pnum = r.v; it.pconf = r.conf; it.pbox = r.box; it.unsure = !r.sure; it.palt = null; it.phead = r.kind === 'heading'; it.popts = r.opts || null; } else { it.pnum = null; it.pbox = null; it.unsure = false; it.phead = false; }
       } catch (e) { it.pnum = null; console.error(e); }
       it.scanned = true; it.manual = false; sl.remove();
     }
