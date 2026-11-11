@@ -183,7 +183,7 @@
   }
 
   /* group stroke components into glyphs (a "4" or "5" is often two strokes) and read them left to right */
-  function readGroup(cs, w) {
+  function readGroup(cs, w, align) {
     if (!cs.length) return null;
     const maxH = Math.max(...cs.map(c => c.bh));
     const keep = cs.filter(c => c.bh >= maxH * .3 || c.bw >= maxH * .45).sort((a, b) => a.x0 - b.x0);
@@ -193,6 +193,15 @@
       if (g && Math.min(g.x1, c.x1) - Math.max(g.x0, c.x0) > Math.min(g.x1 - g.x0, c.bw) * .45) {
         g.x0 = Math.min(g.x0, c.x0); g.x1 = Math.max(g.x1, c.x1); g.y0 = Math.min(g.y0, c.y0); g.y1 = Math.max(g.y1, c.y1); g.px = g.px.concat(c.px);
       } else glyphs.push({x0: c.x0, x1: c.x1, y0: c.y0, y1: c.y1, px: c.px.slice()});
+    }
+    // digits of one number sit on one line: a mark well above or below the main digit is something else
+    if (align && glyphs.length > 1) {
+      const m = glyphs.reduce((a, b) => (b.y1 - b.y0 > a.y1 - a.y0 ? b : a));
+      for (let i = glyphs.length - 1; i >= 0; i--) {
+        const g = glyphs[i]; if (g === m) continue;
+        const ov = Math.min(g.y1, m.y1) - Math.max(g.y0, m.y0);
+        if (ov < Math.min(g.y1 - g.y0, m.y1 - m.y0) * align) glyphs.splice(i, 1);
+      }
     }
     if (!glyphs.length || glyphs.length > 3) return null;
     let s = '', conf = 1, fill = 0;
@@ -207,23 +216,31 @@
 
   /* Like readGroup, but a glyph much wider than tall may be two digits written touching: try splitting it at
      the thinnest column near its middle and keep whichever reading the net trusts more. */
-  function readBest(cs, w) {
-    const base = readGroup(cs, w); if (!base) return null;
-    const qual = g => Math.pow(g.glyphs.reduce((s, x) => s * x.r.p, 1), 1 / g.glyphs.length) - (g.scribbled ? .5 : 0);
+  function readBest(cs, w, align) {
+    const base = readGroup(cs, w, align); if (!base) return null;
+    const qual = g => Math.pow(g.glyphs.reduce((s, x) => s * x.r.p, 1), 1 / g.glyphs.length);
     base.q = qual(base);
     let best = base;
     base.glyphs.forEach((gl, k) => {
       const gw = gl.x1 - gl.x0 + 1, gh = gl.y1 - gl.y0 + 1;
-      if (gw < gh * 1.05 || base.glyphs.length >= 3) return;
+      if (gw < gh * 1.6 || base.glyphs.length >= 3) return;
       const col = new Float32Array(gw); for (const p of gl.px) col[p % w - gl.x0]++;
       let sx = -1, mn = 1e9; for (let x = Math.round(gw * .3); x <= Math.round(gw * .7); x++) if (col[x] < mn) { mn = col[x]; sx = x; }
       if (sx < 0) return;
       const L = gl.px.filter(p => p % w - gl.x0 < sx), R = gl.px.filter(p => p % w - gl.x0 >= sx);
       const gs = new Set(gl.px), parts = [...cs.filter(c => !c.px.some(p => gs.has(p))), ...piecesOf(L, w), ...piecesOf(R, w)];
-      const alt = readGroup(parts, w);
-      if (alt && alt.glyphs.length === base.glyphs.length + 1) { alt.q = qual(alt) - .03; if (alt.q > best.q) best = alt; }
+      const alt = readGroup(parts, w, align);
+      if (alt && alt.glyphs.length === base.glyphs.length + 1) { alt.q = qual(alt) - .08; if (alt.q > best.q) best = alt; }
     });
     return best;
+  }
+
+  /* Choosing between the readings of the different cuts: the value most of them agree on. */
+  function pickRead(reads, topQ) {
+    const votes = new Map();
+    for (const x of reads) votes.set(x.v, (votes.get(x.v) || 0) + x.q * x.q);
+    const bestV = [...votes.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    return reads.filter(x => x.v === bestV).sort((a, b) => b.q - a.q)[0];
   }
 
   /* ---------- circled numbers ---------- */
@@ -265,12 +282,21 @@
         if (r >= .7) { band++; sect[Math.min(S - 1, Math.floor((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI) * S))] = 1; }
         else { inside.push(p); ix0 = Math.min(ix0, x); ix1 = Math.max(ix1, x); iy0 = Math.min(iy0, y); iy1 = Math.max(iy1, y); }
       }
-      const cover = sect.reduce((s, v) => s + v, 0) / S;
+      // a ring clipped by the page edge: judge it only on the part that is inside the picture
+      let inS = 0, hit = 0;
+      for (let q = 0; q < S; q++) {
+        const t = (q + .5) / S * 2 * Math.PI - Math.PI, ex = cx + Math.cos(t) * ra, ey = cy + Math.sin(t) * rb;
+        if (ex < 1 || ey < 1 || ex > w - 2 || ey > map.h - 2) continue;
+        inS++; hit += sect[q];
+      }
+      if (inS < S * .6) return;
+      const cover = hit / inS;
       if (cover < .7 || band < pxs.length * .3 || inside.length < 15) return;
       // the number fills a good part of the ring's middle
       if (iy1 - iy0 < bh * .3 || ix1 - ix0 < bw * .15) return;
-      // page numbers sit in the top margin; rings lower down are exercise numbers or graphs
-      if (cy > map.h * .5) return;
+      // page numbers sit in the top margin; rings lower down are exercise numbers or graphs,
+      // and rings at the side edges are spiral holes
+      if (cy > map.h * .5 || b.x0 < w * .03 || b.x1 > w * .97) return;
       const crossed = inside.length / (Math.PI * ra * rb * .49) > .3;
       // strokes that run around the ring are the ring; the rest are the digits, kept whole.
       // Where a digit touches the ring, the part of the ring stroke well inside is kept as digit ink.
@@ -301,7 +327,7 @@
       // a leftover strip of the ring itself: far out and running along the ring for a good stretch
       const arcLike = q => {
         const rs = q.px.map(rad).sort((a, b) => a - b), sec = new Set(q.px.map(ang));
-        return rs[rs.length >> 1] > .64 && sec.size >= 5;
+        return (rs[rs.length >> 1] > .64 && sec.size >= 5) || rs[rs.length >> 1] > .7;
       };
       const sets = [];
       for (const cut of cuts) for (const tr of trims) {
@@ -387,6 +413,36 @@
     return out;
   }
 
+  /* ---------- a number written on its own in the top margin ("12", no circle) ---------- */
+  function lones(map, comps, taken) {
+    const {w, h} = map, out = [];
+    const ok = c => c.n >= 8 && c.bh >= w * .008 && c.bh <= w * .06 && c.bw <= w * .08 && c.x0 > w * .07 && c.x1 < w * .93 && !taken.has(c);
+    const cs = comps.filter(ok).sort((a, b) => a.x0 - b.x0), used = new Set();
+    // writing-sized marks only: the paper edge or a cover across the top is not "something written nearby"
+    const others = comps.filter(c => c.n >= 8 && (c.bw > 3 || c.bh > 3) && c.bw <= w * .15 && c.bh <= w * .1);
+    for (const s of cs) {
+      if (used.has(s)) continue;
+      const g = [s]; used.add(s); let b = {x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1};
+      for (;;) {
+        const gh = b.y1 - b.y0 + 1;
+        const nx = cs.find(o => !used.has(o) && o.x0 <= b.x1 + gh * 1.5 && o.x1 >= b.x0 - gh * .3 && Math.min(o.y1, b.y1) - Math.max(o.y0, b.y0) > -gh * .3);
+        if (!nx) break;
+        const nb = {x0: Math.min(b.x0, nx.x0), y0: Math.min(b.y0, nx.y0), x1: Math.max(b.x1, nx.x1), y1: Math.max(b.y1, nx.y1)};
+        // a number is a short row of digits: stop before the group runs into other writing
+        if (nb.y1 - nb.y0 > s.bh * 1.7 || nb.x1 - nb.x0 > s.bh * 4) break;
+        g.push(nx); used.add(nx); b = nb;
+      }
+      const gw = b.x1 - b.x0 + 1, gh = b.y1 - b.y0 + 1;
+      if (gw > gh * 3.2 || (b.y0 + b.y1) / 2 > h * .55 || gh < w * .013) continue;
+      // alone: nothing else written close by on the same line
+      const gs = new Set(g), near = others.some(o => !gs.has(o) && !taken.has(o) && Math.max(o.bw, o.bh) >= gh * .35 &&
+        o.x0 < b.x1 + gh * 2.5 && o.x1 > b.x0 - gh * 2.5 && o.y0 < b.y1 + gh * .8 && o.y1 > b.y0 - gh * .8);
+      if (near) continue;
+      out.push({g, box: b, gh});
+    }
+    return out;
+  }
+
   /* Reads the top of a page. Returns [{v, conf, box, kind}] best first; box normalized to src. */
   function readTop(src) {
     if (!getNet()) return [];
@@ -401,19 +457,27 @@
     for (const r of rl) {
       // among readings the net is about equally sure of, the one using the least ink has the fewest ring leftovers
       const reads = [];
-      for (const set of r.sets) { const x = readBest(set, map.w); if (x && x.v) { x.ink = x.glyphs.reduce((s, q) => s + q.px.length, 0); reads.push(x); } }
+      for (const set of r.sets) { const x = readBest(set, map.w, .3); if (x && x.v) { x.ink = x.glyphs.reduce((s, q) => s + q.px.length, 0); reads.push(x); } }
       if (!reads.length) continue;
       const topQ = Math.max(...reads.map(x => x.q));
-      const g = reads.filter(x => x.q >= topQ - .06).sort((a, b) => a.ink - b.ink)[0];
+      const g = pickRead(reads, topQ);
       if (g.scribbled) r.crossed = true;
       const big = r.bh / map.w, high = 1 - r.box.y0 / map.h;
       const score = g.conf * (r.crossed ? .25 : 1) + (r.crossed ? 0 : .5) + Math.min(.3, big * 4) + high * .2;
       // other plausible readings, for the cross-page check
       const opts = new Set([g.v]);
-      for (const x of reads) if (x.q >= topQ - .3) opts.add(x.v);
+      for (const x of reads) if (x.q >= Math.min(topQ - .3, .5)) opts.add(x.v);
       if (String(g.v).length === 3) { const t = String(g.v); opts.add(+t.slice(1)); opts.add(+t.slice(0, 2)); }
       const agree = reads.filter(x => x.v === g.v).length / reads.length;
       res.push({v: g.v, conf: g.conf, agree, score, kind: 'circle', crossed: r.crossed, opts: [...opts].filter(v => v > 0), box: toBox(r.box.x0, r.box.y0, r.box.x1, r.box.y1)});
+    }
+    // strokes that belong to a ring are not candidates for a lone number
+    const taken = new Set();
+    for (const r of rl) for (const c of comps) if (c.x0 >= r.box.x0 && c.x1 <= r.box.x1 && c.y0 >= r.box.y0 && c.y1 <= r.box.y1) taken.add(c);
+    for (const ln of lones(map, comps, taken)) {
+      const g = readBest(ln.g, map.w); if (!g || !g.v || g.glyphs.length > 3) continue;
+      const b = ln.box;
+      res.push({v: g.v, conf: g.conf, agree: 1, score: g.q + .45 - (g.glyphs.length === 1 ? .1 : 0), kind: 'lone', opts: [g.v], box: toBox(b.x0, b.y0, b.x1, b.y1)});
     }
     for (const hd of headings(map, comps)) {
       // where the word ends and the number starts is not always clear ("lecture26"): keep the readings of the
@@ -442,5 +506,5 @@
     return loading;
   }
 
-  window.Hand = {load, readTop, classify, _inkMap: inkMap, _components: components, _rings: rings, _pieces: piecesOf, _headings: headings, _glyph: glyphImage};
+  window.Hand = {load, readTop, classify, _inkMap: inkMap, _components: components, _rings: rings, _pieces: piecesOf, _headings: headings, _lones: lones, _glyph: glyphImage};
 })();

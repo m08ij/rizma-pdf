@@ -290,10 +290,12 @@
           // the net is often confident on a bad cut, so a circled number counts as sure only when the
           // different ways of separating it from the ring agree
           const sure = (b.kind === 'circle' ? b.conf >= .9 && b.agree >= .8 : b.conf >= .95) && (!rival || rival.score < b.score * .75);
+          // a weak lone reading still beats the printed-text reader on handwriting (it reads strokes as "1")
+          if (b.kind === 'lone' && b.conf < .4) throw 0;
           onStep && onStep(1);
           return {v: b.v, conf: 1 + b.conf, box: b.box, sure, kind: b.kind, opts: b.opts || [b.v], alt: rival ? rival.v : null, debug: h.slice(0, 4).map(c => ({v: c.v, conf: +c.conf.toFixed(2), kind: c.kind}))};
         }
-      } catch (e) { console.warn(e); }
+      } catch (e) { if (e) console.warn(e); }
     }
     const w = await getDigitWorker();
     const cands = [];
@@ -362,7 +364,8 @@
   }
 
   /* Cross-page check: duplicates and outliers get flagged and, where a common misread fits a gap, corrected. */
-  const CONF = {'1': '74', '7': '1', '4': '19', '0': '869', '8': '0369', '3': '85', '5': '63', '6': '508', '9': '80', '2': '7'};
+  // misread -> likely true digit (printed and handwritten: a flagged 1 reads as 9 or 7, a crossed 7 as 4, a Z-shaped 2 as 7)
+  const CONF = {'1': '74', '7': '12', '4': '197', '0': '869', '8': '0369', '3': '85', '5': '63', '6': '508', '9': '801', '2': '7'};
   function reconcile(list) {
     const auto = list.filter(it => it.pnum != null && !it.manual);
     const all = list.filter(it => it.pnum != null);
@@ -373,13 +376,15 @@
     const lo = Math.min(...vals.filter(v => Math.abs(v - med) <= span)), hi = Math.max(...vals.filter(v => Math.abs(v - med) <= span));
     const gaps = []; for (let v = lo - 1; v <= hi + 1; v++) if (v > 0 && !used.has(v)) gaps.push(v);
     const fixes = s => {
-      const out = new Set(); if (s.length === 2) out.add(+(s[1] + s[0]));
-      for (let i = 0; i < s.length; i++) for (const r of (CONF[s[i]] || '')) out.add(+(s.slice(0, i) + r + s.slice(i + 1)));
+      const out = new Set();
+      for (let i = 0; i < s.length; i++) for (const r of (CONF[s[i]] || '')) if (i || r !== '0' || s.length === 1) out.add(+(s.slice(0, i) + r + s.slice(i + 1)));
       if (s.length > 1) for (let i = 0; i < s.length; i++) out.add(+(s.slice(0, i) + s.slice(i + 1)));
+      if (s.length === 2) out.add(+(s[1] + s[0]));
       return [...out].filter(v => v > 0);
     };
     // when many pages share numbers, the numbers mark lectures or sections rather than pages: repeats are expected
-    const repeats = (all.length - used.size) / all.length > .15;
+    const sureVals = all.filter(it => it.manual || !it.unsure).map(it => it.pnum);
+    const repeats = sureVals.length >= 3 && (sureVals.length - new Set(sureVals).size) / sureVals.length > .15;
     if (repeats) {
       // numbers read with confidence are anchors; a doubtful page whose reading matches no anchor but whose
       // alternative reading does (a "lecture 26" heading among circled 26s) takes that alternative
@@ -393,21 +398,21 @@
         if (alt != null) { it.palt = it.pnum; it.pnum = alt; it.unsure = true; }
       }
     }
+    // pages whose number looks wrong: a duplicate of a more trusted page, or far from the rest
+    const todo = [];
     for (const it of auto) {
       const dup = repeats ? [] : all.filter(o => o !== it && o.pnum === it.pnum);
       const far = Math.abs(it.pnum - med) > span;
-      if (!dup.length && !far) continue;
-      if (dup.length && dup.some(o => o.manual || (o.pconf || 0) > (it.pconf || 0))) {
-        const f = fixes(String(it.pnum)).find(v => gaps.includes(v));
-        if (f) { it.palt = it.pnum; it.pnum = f; gaps.splice(gaps.indexOf(f), 1); }
-        it.unsure = true;
-      } else if (far) {
-        // numbers that repeat (lectures) leave no meaningful gaps: only take a reading other pages confirm
-        const f = repeats ? (it.popts || []).concat(fixes(String(it.pnum))).find(v => v !== it.pnum && all.some(o => o !== it && o.pnum === v && !o.unsure))
-          : fixes(String(it.pnum)).find(v => gaps.includes(v));
-        if (f) { it.palt = it.pnum; it.pnum = f; if (gaps.includes(f)) gaps.splice(gaps.indexOf(f), 1); }
-        it.unsure = true;
-      }
+      if (dup.length && dup.some(o => o.manual || (it.unsure && !o.unsure) || (!!o.unsure === !!it.unsure && (o.pconf || 0) > (it.pconf || 0)))) todo.push(it);
+      else if (far) todo.push(it);
+    }
+    const ok = v => repeats ? all.some(o => o.pnum === v && !o.unsure && !todo.includes(o)) : gaps.includes(v);
+    const take = (it, f) => { it.palt = it.pnum; it.pnum = f; const k = gaps.indexOf(f); if (k >= 0) gaps.splice(k, 1); };
+    // first the reader's own other readings (strong evidence), then the usual digit confusions
+    for (const it of todo) { const f = (it.popts || []).find(v => v !== it.pnum && ok(v)); if (f != null) { take(it, f); it.fixed = true; } }
+    for (const it of todo) {
+      if (!it.fixed) { const f = fixes(String(it.pnum)).find(v => v !== it.pnum && ok(v)); if (f != null) take(it, f); }
+      delete it.fixed; it.unsure = true;
     }
   }
 
