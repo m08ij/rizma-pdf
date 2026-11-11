@@ -59,6 +59,15 @@
     for (let o = 0; o < 10; o++) lg[o] /= sum;
     return lg;
   }
+  /* the first net's 64 hidden features of a glyph (used to tell upright writing from upside-down) */
+  function features(img) {
+    const N = getNet(); if (!N) return null; const n = N[0];
+    let h = reluPool(conv(img, 1, 28, n.c1, n.b1, 12), 12, 28);
+    h = reluPool(conv(h, 12, 14, n.c2, n.b2, 24), 24, 14);
+    const z = new Float32Array(64);
+    for (let o = 0; o < 64; o++) { let s = n.g1[o]; for (let i = 0; i < h.length; i++) s += h[i] * n.f1[i * 64 + o]; z[o] = Math.max(0, s); }
+    return z;
+  }
   function classify(img) {
     const Ns = getNet(); if (!Ns) return null;
     const p = new Float32Array(10);
@@ -270,7 +279,7 @@
     const test = (g, b) => {
       const bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1, key = b.x0 + ',' + b.y0 + ',' + b.x1 + ',' + b.y1;
       if (keys.has(key)) return; keys.add(key);
-      if (bw < w * .045 || bw > w * .26 || bh < w * .028 || bh > w * .13) return;
+      if (bw < w * .036 || bw > w * .26 || bh < w * .026 || bh > w * .13) return;
       const asp = bw / bh; if (asp < .9 || asp > 2.8) return;
       const members = [...g, ...comps.filter(o => !g.has(o) && o.x0 >= b.x0 && o.x1 <= b.x1 && o.y0 >= b.y0 && o.y1 <= b.y1)];
       const pxs = []; for (const o of members) for (const p of o.px) pxs.push(p);
@@ -496,6 +505,86 @@
     return res.sort((a, b) => b.score - a.score);
   }
 
+  /* ---------- which way up is the photo? ---------- */
+  /* Notebook ruled lines run across the page, so strong horizontal edges mean upright (or upside down) and
+     strong vertical ones mean the photo is sideways. Which of the two ways is decided by the writing itself:
+     a small classifier, trained on notebook handwriting, scores each written mark as upright or flipped using the
+     digit net's features; one mark says little, but a page has a hundred or more and their vote is reliable. */
+  const OW = [0.2941,0,-0.1974,0.1652,0,0.0993,0.1586,-0.1918,0.1325,-0.1733,0.0383,-0.0025,0,-0.0228,0.0682,0,0.0943,0.097,-0.2739,-0.213,0.0413,-0.0122,-0.2232,0,-0.0476,0.1381,0,-0.0641,0.438,-0.0557,0.168,0.2429,0.0499,0.1521,0.3619,-0.2528,0.1987,-0.4473,0.6049,0.0272,0.0088,-0.7454,0.2824,-0.1924,0.2914,-0.4674,0,-0.1139,0.1276,-0.0463,0.2699,-0.1681,0,0.2861,-0.1721,0,-0.0044,0,-0.055,-0.228,-0.1175,-0.0423,0.0294,-0.1805,-0.2108,0.0689], OMU = [1.4716,0,0.8297,0.8537,0,0.5994,1.048,1.2991,0.3266,0.6749,0.8485,1.4523,0,1.0284,2.695,0,2.37,0.6527,2.3113,0.2304,0.5813,0.7867,0.3406,0,1.0599,0.1625,0,0.5782,2.3103,0.7985,0.8704,0.661,0.8897,0.2242,0.97,1.1439,1.5317,2.2581,2.7772,1.0539,0.6624,3.1278,1.6701,1.1211,0.8385,0.6185,0,0.9978,1.9134,0.6827,0.2355,0.378,0,0.1462,1.2829,0,1.1315,0,0.7922,1.367,1.3461,1.837,1.2819,0.5506,-0.4938,0], OSD = [1.9748,1,1.4922,1.4184,1,1.1408,1.7435,1.6789,0.9443,1.302,1.749,2.4149,1,1.6285,2.2991,1,2.5728,1.3325,2.1718,0.7248,1.1984,1.5096,1.0272,1,1.487,0.6358,1,1.3288,3.0762,1.6146,1.5344,1.2969,1.6939,0.5827,1.888,1.5622,2.1136,2.3878,2.3996,1.7037,1.3069,2.8629,1.7886,1.7261,1.2755,1.3952,1,1.395,1.9105,1.339,0.6798,0.9448,1,0.4989,2.4011,1,1.558,1,1.3206,1.8651,1.4915,1.9939,2.3391,1.5672,0.6,1];
+  function lineDir(src) {
+    const k = 360 / Math.max(src.width, src.height), w = Math.max(8, Math.round(src.width * k)), h = Math.max(8, Math.round(src.height * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d', {willReadFrequently: true}); x.drawImage(src, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+    for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = .299 * d[i] + .587 * d[i + 1] + .114 * d[i + 2];
+    let H = 0, V = 0;
+    for (let y = Math.round(h * .1); y < h * .9; y++) for (let xx = Math.round(w * .1); xx < w * .9; xx++) {
+      const i = y * w + xx, ax = Math.abs(g[i + 1] - g[i - 1]), ay = Math.abs(g[i + w] - g[i - w]);
+      if (Math.max(ax, ay) < 12) continue;
+      if (ay > ax * 2.5) H++; else if (ax > ay * 2.5) V++;
+    }
+    return H / (V + 1);
+  }
+  function turn(img, q) { // rotate a 28x28 glyph by q quarter turns clockwise
+    const o = new Float32Array(784);
+    for (let y = 0; y < 28; y++) for (let x = 0; x < 28; x++) {
+      const v = img[y * 28 + x]; if (!v) continue;
+      const X = q === 1 ? 27 - y : q === 2 ? 27 - x : q === 3 ? y : x, Y = q === 1 ? x : q === 2 ? 27 - y : q === 3 ? 27 - x : y;
+      o[Y * 28 + X] = v;
+    }
+    return o;
+  }
+  /* mean "upright" score of the writing after turning the page q quarter turns clockwise */
+  function uprightScores(src) {
+    // the short side is always 900px, so a sideways photo is read at the same scale as an upright one
+    const map = inkMap(src, {x: 0, y: 0, w: 1, h: 1}, 900 * Math.max(1, src.width / src.height)), {comps} = components(map.ink, map.w, map.h), w = map.w, H = map.h;
+    const S = Math.min(w, H), land = w > H;
+    let cs = comps.filter(c => {
+      const a = Math.max(c.bw, c.bh), b = Math.min(c.bw, c.bh);
+      return a >= S * .015 && a <= S * .08 && c.n >= 15 && b > 2 && (land
+        ? c.y0 > H * .05 && c.y1 < H * .95 && c.x0 > w * .03 && c.x1 < w * .97
+        : c.x0 > w * .05 && c.x1 < w * .95 && c.y0 > H * .03 && c.y1 < H * .97);
+    });
+    if (cs.length > 110) { const st = cs.length / 110; cs = cs.filter((c, i) => Math.floor(i % st) === 0); }
+    if (cs.length < 20) return null;
+    const sum = [0, 0, 0, 0];
+    for (const c of cs) {
+      const g = glyphImage(c.px, w);
+      for (let q = 0; q < 4; q++) {
+        const t = q ? turn(g, q) : g, f = features(t), sideways = q % 2 === 1;
+        // aspect of the glyph as it would stand after the turn
+        const asp = Math.log(sideways ? c.bh / c.bw : c.bw / c.bh);
+        let z = 0;
+        for (let j = 0; j < 64; j++) z += OW[j] * (f[j] - OMU[j]) / OSD[j];
+        z += OW[64] * (asp - OMU[64]) / OSD[64] + OW[65];
+        sum[q] += z;
+      }
+    }
+    const out = sum.map(v => v / cs.length); out.n = cs.length;
+    return out;
+  }
+  /* Clockwise turn (0, 90, 180, 270) that makes the page upright; 0 when unsure. */
+  function orient(src) {
+    if (!getNet()) return 0;
+    const dir = lineDir(src);
+    if (dir > .6 && dir < 1.2) return 0;
+    if (dir <= .6) {
+      // turn it a quarter first so the ruled lines lie across, then it is the same up-or-down question
+      const c = document.createElement('canvas'); c.width = src.height; c.height = src.width;
+      const x = c.getContext('2d'); x.translate(c.width / 2, c.height / 2); x.rotate(Math.PI / 2); x.drawImage(src, -src.width / 2, -src.height / 2);
+      const s = uprightScores(c); if (!s) return 0;
+      if (Math.abs(s[0] - s[2]) < .08) return 0;
+      return s[0] > s[2] ? 90 : 270;
+    }
+    const s = uprightScores(src); if (!s) return 0;
+    // lines run across: only turn it over when plenty of writing clearly says it is upside down,
+    // and not when a page number already reads cleanly at the top the way it is
+    if (s.n < 45 || s[2] - s[0] <= .3) return 0;
+    const top = readTop(src).filter(c => !c.crossed)[0];
+    if (top && top.conf >= .85 && top.kind !== 'heading') return 0;
+    return 180;
+  }
+
   let loading = null;
   function load() {
     if (window.HAND_W) return Promise.resolve();
@@ -506,5 +595,5 @@
     return loading;
   }
 
-  window.Hand = {load, readTop, classify, _inkMap: inkMap, _components: components, _rings: rings, _pieces: piecesOf, _headings: headings, _lones: lones, _glyph: glyphImage};
+  window.Hand = {load, readTop, orient, classify, features, _lineDir: lineDir, _upright: uprightScores, _inkMap: inkMap, _components: components, _rings: rings, _pieces: piecesOf, _headings: headings, _lones: lones, _glyph: glyphImage};
 })();

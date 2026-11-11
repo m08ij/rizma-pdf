@@ -425,20 +425,24 @@ async function addFiles(list) {
   if (items.some(i => i.sample)) items = items.filter(i => !i.sample);
   const scan = S.kind === 'notes';
   busy(true, 'جارٍ إضافة الصور…', '', 0); await tick();
-  let bad = 0, cropped = 0;
+  let bad = 0, cropped = 0, turned = 0;
+  // handwritten pages photographed sideways or upside down are turned upright (not for slides)
+  let orient = S.kind !== 'slides' && window.Hand;
+  if (orient) { try { await Hand.load(); } catch (e) { orient = false; } }
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     try {
       const im = await loadImg(URL.createObjectURL(f));
       const it = newItem(f.name || 'صورة.png', im, {date: f.lastModified || Date.now(), filter: scan ? 'doc' : 'none'});
       if (S.autoCrop) { it.quad = Scan.detect(im); if (it.quad) cropped++; }
+      if (orient) { try { const r = Hand.orient(it.quad ? Scan.warp(im, it.quad, 1400) : im); if (r) { it.rot = r; turned++; } } catch (e) { console.warn(e); } }
       reproc(it); items.push(it);
     } catch (e) { bad++; console.error(e); }
     busy(true, null, arN(i + 1) + ' من ' + arN(files.length), (i + 1) / files.length * 100); await tick();
   }
   busy(false); renderGrid();
   if (bad) toast(`تعذّر فتح ${arN(bad)} صورة. إذا كانت من آيفون (HEIC) حوّلها إلى JPG أولاً`, 5200);
-  else toast(`أضيفت ${arN(files.length)} صورة` + (cropped ? `، وقُصّت الورقة في ${arN(cropped)}` : ''), 3200);
+  else toast(`أضيفت ${arN(files.length)} صورة` + (cropped ? `، وقُصّت الورقة في ${arN(cropped)}` : '') + (turned ? `، ودُوّرت ${arN(turned)} كانت مقلوبة` : ''), 3600);
 }
 const pickFiles = () => $('#file').click();
 $('#addTop').onclick = pickFiles; $('#empty').onclick = pickFiles;
